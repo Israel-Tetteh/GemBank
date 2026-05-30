@@ -126,5 +126,35 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
   message("Database initialized successfully at: ", db_path)
 }
 
-# Run to intiate the database
-# init_db( )
+
+
+
+#' Clear All Data from the Breeding Database
+#'
+#' @param db_path Path to the sqlite file. Defaults to `"data/breeding_db.sqlite"`.
+#' @export
+clear_db <- function(db_path = "data/breeding_db.sqlite") {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  
+  # Enable foreign key support
+  DBI::dbExecute(con, "PRAGMA foreign_keys = ON;")
+  
+  DBI::dbWithTransaction(con, {
+    # Delete data in reverse dependency order
+    DBI::dbExecute(con, "DELETE FROM observations;")
+    DBI::dbExecute(con, "DELETE FROM inventory;")
+    DBI::dbExecute(con, "DELETE FROM plots;")
+    DBI::dbExecute(con, "DELETE FROM traits;")
+    DBI::dbExecute(con, "DELETE FROM trials;")
+    DBI::dbExecute(con, "DELETE FROM germplasm;")
+    DBI::dbExecute(con, "DELETE FROM transaction_log;")
+    
+    # Reset AUTOINCREMENT counters so new entries start at ID 1
+    DBI::dbExecute(con, "DELETE FROM sqlite_sequence;")
+  })
+  
+  message("All data has been successfully deleted from the database.")
+}
+
+
