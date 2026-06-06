@@ -1,6 +1,6 @@
 
 # Create the database
-init_db(db_path = "data/breeding_db.sqlite") # define your own path 
+init_db(db_path = "data/breeding_db.sqlite") # define your own path maybe your desktop
 
 db_file <- "data/breeding_db.sqlite"
 current_user <- "Israel Tetteh"
@@ -136,7 +136,7 @@ field_book_list <- get_field_book(
   db_path = db_file,
   accession_name = "ICSV-111"
 )
-print(field_book_list[[1]])
+print(field_book_list)
 
 # Check transaction logs
 recent_logs <- get_audit_ledger(db_path = db_file, limit = 5)

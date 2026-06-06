@@ -33,3 +33,15 @@ Invisibly returns `TRUE` on success.
 Adds seeds to the inventory using the accession name. Updates existing stock
 or creates a new record, logging the atomic transaction in human-readable format.
 }
+\examples{
+\dontrun{
+add_inventory_deposit(
+  db_path = tempfile(fileext = ".sqlite"),
+  accession_name = "SC-2026-001",
+  amount_grams = 1500,
+  storage_location = "Cold_Room_Shelf_A",
+  user_name = "Israel Tetteh",
+  reason = "Harvest from 2026 Trial"
+)
+}
+}

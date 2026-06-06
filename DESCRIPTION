@@ -1,17 +1,24 @@
 Package: GemBank
-Title: An Amazing Shiny App
-Version: 0.0.0.9000
+Title: Seed Inventory and Breeding Trial Management System
+Version: 0.1.0
 Authors@R: 
-    person(given = "firstname",
-           family = "lastname",
+    person(given = "Israel",
+           family = "Tetteh",
            role = c("aut", "cre"),
-           email = "your@email.com")
-Description: What the package does (one paragraph).
-License: What license is it under?
+           email = "israeltetteh715@email.com",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: A robust, Golem-based Shiny application designed for plant breeders to manage germplasm inventory, track seed transactions, and store phenotypic observations from field trials. It uses a relational SQLite backend for data integrity and supports complex experimental designs.
+License: MIT + file LICENSE
+URL: https://github.com/Israel-Tetteh/GemBank
+BugReports: https://github.com/Israel-Tetteh/GemBank/issues
 Imports: 
     config,
-    golem,
-    shiny
+    golem (>= 0.5.0),
+    shiny (>= 1.8.0),
+    DBI,
+    RSQLite,
+    jsonlite
 Encoding: UTF-8
 LazyData: true
+Config/golem/app_name: GemBank
 Config/roxygen2/version: 8.0.0

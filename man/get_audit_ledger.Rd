@@ -9,11 +9,18 @@ get_audit_ledger(db_path = "data/breeding_db.sqlite", limit = 100)
 \arguments{
 \item{db_path}{Path to the SQLite file.}
 
-\item{limit}{Number of recent transactions to return.}
+\item{limit}{Number of recent transactions to return. Defaults to 100.}
 }
 \value{
 A dataframe of recent database activity.
 }
 \description{
-Get the Scientific Audit Ledger
+Retrieves a log of recent database activity (inserts, updates, etc.) to maintain
+a scientific audit trail.
+}
+\examples{
+\dontrun{
+audit_log <- get_audit_ledger(limit = 50)
+head(audit_log)
+}
 }

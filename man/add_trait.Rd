@@ -18,7 +18,7 @@ Defaults to `"data/breeding_db.sqlite"`.}
 Invisibly returns `TRUE` on success.
 }
 \description{
-Defines a new phenotypic trait and its associated unit of measurement in the 
+Defines a new phenotypic trait and its associated unit of measurement in the
 database. This standardizes the metrics recorded during trials.
 }
 \examples{

@@ -33,3 +33,15 @@ Invisibly returns `TRUE` on success.
 Records a phenotypic measurement using human-readable plot numbers and trait names.
 It automatically resolves internal IDs and writes a breeder-friendly ledger entry.
 }
+\examples{
+\dontrun{
+add_observation(
+  db_path = tempfile(fileext = ".sqlite"),
+  trial_name = "2026_Cowpea_Aphid_Screening",
+  plot_number = 101,
+  trait_name = "Aphid_Damage_Score",
+  value = 4.5,
+  user_name = "Israel Tetteh"
+)
+}
+}

@@ -25,7 +25,7 @@ Defaults to `"data/breeding_db.sqlite"`.}
 Invisibly returns `TRUE` on success, or throws an error on failure.
 }
 \description{
-Registers a new seed line, variety, or genetic material (germplasm) into the 
+Registers a new seed line, variety, or genetic material (germplasm) into the
 passport table of the database.
 }
 \examples{

@@ -15,5 +15,12 @@ get_low_stock(db_path = "data/breeding_db.sqlite", threshold = 500)
 A dataframe of germplasm accessions that need multiplication.
 }
 \description{
-Get Low Stock Alerts
+Identifies germplasm accessions in the inventory whose quantities have fallen
+below a specified threshold, signaling the need for seed multiplication.
+}
+\examples{
+\dontrun{
+# Get all accessions with less than 1000g of seed remaining
+low_stock_alerts <- get_low_stock(threshold = 1000)
+}
 }

@@ -76,7 +76,8 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
       plot_number INTEGER,
       block INTEGER,
       FOREIGN KEY (trial_id) REFERENCES trials(trial_id),
-      FOREIGN KEY (germplasm_id) REFERENCES germplasm(germplasm_id)
+      FOREIGN KEY (germplasm_id) REFERENCES germplasm(germplasm_id),
+      UNIQUE (trial_id, plot_number)
     );"
     )
 
@@ -100,7 +101,8 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
       value REAL,
       obs_date DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (plot_id) REFERENCES plots(plot_id),
-      FOREIGN KEY (trait_id) REFERENCES traits(trait_id)
+      FOREIGN KEY (trait_id) REFERENCES traits(trait_id),
+      UNIQUE (plot_id, trait_id)
     );"
     )
 
@@ -113,7 +115,8 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
       quantity REAL,
       unit TEXT,
       storage_location TEXT,
-      FOREIGN KEY (germplasm_id) REFERENCES germplasm(germplasm_id)
+      FOREIGN KEY (germplasm_id) REFERENCES germplasm(germplasm_id),
+      UNIQUE (germplasm_id)
     );"
     )
 
@@ -135,22 +138,20 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
 }
 
 
-
-
 #' @title Clear All Data from the Breeding Database
-#' 
+#'
 #' @description
 #' Deletes all records from all tables in the database while preserving the schema.
-#' This is useful for resetting a test database or starting a new breeding season 
+#' This is useful for resetting a test database or starting a new breeding season
 #' from scratch. It also resets all autoincrement sequences.
 #'
-#' @param db_path A character string specifying the path to the SQLite file. 
+#' @param db_path A character string specifying the path to the SQLite file.
 #'   Defaults to `"data/breeding_db.sqlite"`.
-#' 
+#'
 #' @return Invisibly returns `NULL`.
-#' 
+#'
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' # Use case: Resetting a test database before running tests
@@ -159,7 +160,7 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
 clear_db <- function(db_path = "data/breeding_db.sqlite") {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
-  
+
   # Enable foreign keys
   DBI::dbExecute(con, "PRAGMA foreign_keys = ON;")
 
@@ -172,7 +173,7 @@ clear_db <- function(db_path = "data/breeding_db.sqlite") {
     DBI::dbExecute(con, "DELETE FROM trials;")
     DBI::dbExecute(con, "DELETE FROM germplasm;")
     DBI::dbExecute(con, "DELETE FROM transaction_log;")
-    
+
     # Reset AUTOINCREMENT
     DBI::dbExecute(con, "DELETE FROM sqlite_sequence;")
   })
@@ -181,15 +182,14 @@ clear_db <- function(db_path = "data/breeding_db.sqlite") {
 }
 
 
-
 ################################################################################
 #     DATA ENTRY & INSERTS
 ################################################################################
 
 #' @title Add Germplasm to Database
-#' 
+#'
 #' @description
-#' Registers a new seed line, variety, or genetic material (germplasm) into the 
+#' Registers a new seed line, variety, or genetic material (germplasm) into the
 #' passport table of the database.
 #'
 #' @param db_path A character string specifying the path to the SQLite file.
@@ -197,11 +197,11 @@ clear_db <- function(db_path = "data/breeding_db.sqlite") {
 #' @param accession_name Unique identifier for the seed line.
 #' @param pedigree Genetic background or cross.
 #' @param species Biological species (e.g., "Sorghum bicolor", "Vigna unguiculata").
-#' 
+#'
 #' @return Invisibly returns `TRUE` on success, or throws an error on failure.
-#' 
+#'
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' # Use case: Registering a new variety of cowpea
@@ -243,22 +243,21 @@ add_germplasm <- function(
 }
 
 
-
 #' @title Add a Trait Definition
-#' 
+#'
 #' @description
-#' Defines a new phenotypic trait and its associated unit of measurement in the 
+#' Defines a new phenotypic trait and its associated unit of measurement in the
 #' database. This standardizes the metrics recorded during trials.
 #'
 #' @param db_path A character string specifying the path to the SQLite file.
 #'   Defaults to `"data/breeding_db.sqlite"`.
 #' @param trait_name Name of the metric or trait being measured (e.g., "Aphid_Damage_Score").
 #' @param unit Unit of measurement (e.g., "cm", "kg/ha", "1-5 Scale").
-#' 
+#'
 #' @return Invisibly returns `TRUE` on success.
-#' 
+#'
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' # Use case: Defining standard traits for yield and disease resistance
@@ -278,12 +277,11 @@ add_trait <- function(db_path = "data/breeding_db.sqlite", trait_name, unit) {
 }
 
 
-
 #' @title Add a Trial with Flexible Metadata
-#' 
+#'
 #' @description
 #' Creates a new field or greenhouse trial record in the database. Flexible metadata
-#' can be provided as a list, which is automatically serialized into JSON format for 
+#' can be provided as a list, which is automatically serialized into JSON format for
 #' storage.
 #'
 #' @param db_path A character string specifying the path to the SQLite file.
@@ -291,13 +289,13 @@ add_trait <- function(db_path = "data/breeding_db.sqlite", trait_name, unit) {
 #' @param trial_name Name of the experiment or trial.
 #' @param trial_loc Location of the experiment (e.g., "Somanya_Field_Station").
 #' @param start_date Start date of the trial in YYYY-MM-DD format.
-#' @param metadata_list A named R list of custom trial parameters (e.g., experimental 
+#' @param metadata_list A named R list of custom trial parameters (e.g., experimental
 #'   design, irrigation type). Defaults to an empty list.
-#' 
+#'
 #' @return Invisibly returns `TRUE` on success.
-#' 
+#'
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' # Use case: Setting up a new screening trial for cowpea aphids
@@ -337,7 +335,6 @@ add_trial <- function(
 }
 
 
-
 #' @title Link Germplasm to a Trial (Create a Plot)
 #'
 #' @description
@@ -352,7 +349,7 @@ add_trial <- function(
 #'
 #' @return Invisibly returns `TRUE` on success.
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' add_plot(
@@ -406,7 +403,6 @@ add_plot <- function(
 }
 
 
-
 #' @title Record a Phenotypic Observation
 #'
 #' @description
@@ -422,7 +418,7 @@ add_plot <- function(
 #'
 #' @return Invisibly returns `TRUE` on success.
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' add_observation(
@@ -473,12 +469,30 @@ add_observation <- function(
   trait_id <- t_res$trait_id[1]
 
   DBI::dbWithTransaction(con, {
-    # Insert record
-    DBI::dbExecute(
+    # Check if observation already exists for this plot and trait
+    check_obs <- DBI::dbGetQuery(
       con,
-      "INSERT INTO observations (plot_id, trait_id, value) VALUES (?, ?, ?)",
-      params = list(plot_id, trait_id, value)
+      "SELECT observation_id FROM observations WHERE plot_id = ? AND trait_id = ?",
+      params = list(plot_id, trait_id)
     )
+
+    if (nrow(check_obs) == 0) {
+      # Insert new record
+      DBI::dbExecute(
+        con,
+        "INSERT INTO observations (plot_id, trait_id, value) VALUES (?, ?, ?)",
+        params = list(plot_id, trait_id, value)
+      )
+      action_type <- "INSERT"
+    } else {
+      # Update existing record (correction/overwrite)
+      DBI::dbExecute(
+        con,
+        "UPDATE observations SET value = ?, obs_date = CURRENT_TIMESTAMP WHERE plot_id = ? AND trait_id = ?",
+        params = list(value, plot_id, trait_id)
+      )
+      action_type <- "UPDATE"
+    }
 
     # Format log details
     log_details <- sprintf(
@@ -491,13 +505,12 @@ add_observation <- function(
     DBI::dbExecute(
       con,
       "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)",
-      params = list("observations", "INSERT", user_name, log_details)
+      params = list("observations", action_type, user_name, log_details)
     )
   })
 
   invisible(TRUE)
 }
-
 
 
 #' @title Deposit Seeds into Inventory
@@ -515,7 +528,7 @@ add_observation <- function(
 #'
 #' @return Invisibly returns `TRUE` on success.
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' add_inventory_deposit(
@@ -566,8 +579,8 @@ add_inventory_deposit <- function(
         params = list(germplasm_id, amount_grams, storage_location)
       )
     } else {
-      update_inv <- "UPDATE inventory SET quantity = quantity + ? WHERE germplasm_id = ?"
-      DBI::dbExecute(con, update_inv, params = list(amount_grams, germplasm_id))
+      update_inv <- "UPDATE inventory SET quantity = quantity + ?, storage_location = ? WHERE germplasm_id = ?"
+      DBI::dbExecute(con, update_inv, params = list(amount_grams, storage_location, germplasm_id))
     }
 
     log_query <- "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)"
@@ -593,12 +606,9 @@ add_inventory_deposit <- function(
 }
 
 
-
-
 ################################################################################
 #    DATA RETRIEVAL & REPORTING
 ################################################################################
-
 
 #' @title Get Seed Inventory Status
 #'
@@ -737,6 +747,7 @@ get_germplasm_passport <- function(
 #' @importFrom DBI dbConnect dbDisconnect dbGetQuery
 #' @importFrom RSQLite SQLite
 #' @importFrom jsonlite fromJSON
+#' @importFrom stats reshape
 #' @export
 #'
 #' @examples
@@ -785,12 +796,17 @@ get_trial_data <- function(
   }
 
   # Parse JSON metadata
-  metadata_list <- tryCatch(
-    {
-      jsonlite::fromJSON(raw_data$metadata[1])
-    },
-    error = function(e) list()
-  )
+  metadata_str <- raw_data$metadata[1]
+  if (is.na(metadata_str) || metadata_str == "") {
+    metadata_list <- list()
+  } else {
+    metadata_list <- tryCatch(
+      {
+        jsonlite::fromJSON(metadata_str)
+      },
+      error = function(e) list()
+    )
+  }
 
   # Subset observation columns
   obs_df <- raw_data[, c(
@@ -827,7 +843,6 @@ get_trial_data <- function(
 }
 
 
-
 #' @title Get Raw Field Book Data (By Trial or Accession)
 #'
 #' @description
@@ -847,6 +862,7 @@ get_trial_data <- function(
 #'
 #' @importFrom DBI dbConnect dbDisconnect dbGetQuery
 #' @importFrom RSQLite SQLite
+#' @importFrom stats reshape
 #' @export
 #'
 #' @examples
@@ -925,19 +941,18 @@ get_field_book <- function(
 }
 
 
-
 #' @title Get the Scientific Audit Ledger
-#' 
-#' @description 
-#' Retrieves a log of recent database activity (inserts, updates, etc.) to maintain 
+#'
+#' @description
+#' Retrieves a log of recent database activity (inserts, updates, etc.) to maintain
 #' a scientific audit trail.
-#' 
+#'
 #' @param db_path Path to the SQLite file.
 #' @param limit Number of recent transactions to return. Defaults to 100.
-#' 
+#'
 #' @return A dataframe of recent database activity.
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' audit_log <- get_audit_ledger(limit = 50)
@@ -965,19 +980,18 @@ get_audit_ledger <- function(db_path = "data/breeding_db.sqlite", limit = 100) {
 }
 
 
-
 #' @title Get Low Stock Alerts
-#' 
-#' @description 
-#' Identifies germplasm accessions in the inventory whose quantities have fallen 
+#'
+#' @description
+#' Identifies germplasm accessions in the inventory whose quantities have fallen
 #' below a specified threshold, signaling the need for seed multiplication.
-#' 
+#'
 #' @param db_path Path to the SQLite file.
 #' @param threshold Numeric value in grams. Any seed with stock below this value is returned. Defaults to 500g.
-#' 
+#'
 #' @return A dataframe of germplasm accessions that need multiplication.
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' # Get all accessions with less than 1000g of seed remaining
@@ -1008,8 +1022,6 @@ get_low_stock <- function(
 
   return(result)
 }
-
-
 
 
 #' @title Withdraw Seeds from Inventory

@@ -7,7 +7,7 @@
 clear_db(db_path = "data/breeding_db.sqlite")
 }
 \arguments{
-\item{db_path}{A character string specifying the path to the SQLite file. 
+\item{db_path}{A character string specifying the path to the SQLite file.
 Defaults to `"data/breeding_db.sqlite"`.}
 }
 \value{
@@ -15,7 +15,7 @@ Invisibly returns `NULL`.
 }
 \description{
 Deletes all records from all tables in the database while preserving the schema.
-This is useful for resetting a test database or starting a new breeding season 
+This is useful for resetting a test database or starting a new breeding season
 from scratch. It also resets all autoincrement sequences.
 }
 \examples{

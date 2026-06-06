@@ -7,16 +7,16 @@
 init_db(db_path = "data/breeding_db.sqlite")
 }
 \arguments{
-\item{db_path}{A character string specifying the path to the SQLite file. 
+\item{db_path}{A character string specifying the path to the SQLite file.
 Defaults to `"data/breeding_db.sqlite"`.}
 }
 \value{
-Invisibly returns `NULL`. This function is primarily called for its 
+Invisibly returns `NULL`. This function is primarily called for its
   side effect of creating and initializing the database schema.
 }
 \description{
-Creates a new SQLite database with the required schema for the breeding database. 
-If the database already exists, it connects to it and ensures the required tables 
+Creates a new SQLite database with the required schema for the breeding database.
+If the database already exists, it connects to it and ensures the required tables
 are present.
 }
 \examples{

@@ -30,3 +30,14 @@ Invisibly returns `TRUE` on success.
 Assigns a specific germplasm to a trial by creating a plot record.
 Looks up the internal database IDs using the human-readable trial and accession names.
 }
+\examples{
+\dontrun{
+add_plot(
+  db_path = tempfile(fileext = ".sqlite"),
+  trial_name = "2026_Cowpea_Aphid_Screening",
+  accession_name = "Asontem",
+  plot_number = 101,
+  block = 1
+)
+}
+}

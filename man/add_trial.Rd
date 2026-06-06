@@ -22,7 +22,7 @@ Defaults to `"data/breeding_db.sqlite"`.}
 
 \item{start_date}{Start date of the trial in YYYY-MM-DD format.}
 
-\item{metadata_list}{A named R list of custom trial parameters (e.g., experimental 
+\item{metadata_list}{A named R list of custom trial parameters (e.g., experimental
 design, irrigation type). Defaults to an empty list.}
 }
 \value{
@@ -30,7 +30,7 @@ Invisibly returns `TRUE` on success.
 }
 \description{
 Creates a new field or greenhouse trial record in the database. Flexible metadata
-can be provided as a list, which is automatically serialized into JSON format for 
+can be provided as a list, which is automatically serialized into JSON format for
 storage.
 }
 \examples{
