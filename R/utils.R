@@ -3,22 +3,22 @@
 ################################################################################
 
 #' @title Initialize the Breeding Database
-#' 
-#' @description 
-#' Creates a new SQLite database with the required schema for the breeding database. 
-#' If the database already exists, it connects to it and ensures the required tables 
+#'
+#' @description
+#' Creates a new SQLite database with the required schema for the breeding database.
+#' If the database already exists, it connects to it and ensures the required tables
 #' are present.
-#' 
-#' @param db_path A character string specifying the path to the SQLite file. 
+#'
+#' @param db_path A character string specifying the path to the SQLite file.
 #'   Defaults to `"data/breeding_db.sqlite"`.
-#' 
-#' @return Invisibly returns `NULL`. This function is primarily called for its 
+#'
+#' @return Invisibly returns `NULL`. This function is primarily called for its
 #'   side effect of creating and initializing the database schema.
-#' 
+#'
 #' @importFrom DBI dbConnect dbDisconnect dbExecute dbWithTransaction
 #' @importFrom RSQLite SQLite
 #' @export
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' # Use case: Setting up the database for a new project
@@ -162,7 +162,7 @@ clear_db <- function(db_path = "data/breeding_db.sqlite") {
   
   # Enable foreign keys
   DBI::dbExecute(con, "PRAGMA foreign_keys = ON;")
-  
+
   DBI::dbWithTransaction(con, {
     # Delete all data
     DBI::dbExecute(con, "DELETE FROM observations;")
@@ -176,7 +176,7 @@ clear_db <- function(db_path = "data/breeding_db.sqlite") {
     # Reset AUTOINCREMENT
     DBI::dbExecute(con, "DELETE FROM sqlite_sequence;")
   })
-  
+
   message("All data has been successfully deleted from the database.")
 }
 
