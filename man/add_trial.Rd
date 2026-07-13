@@ -26,7 +26,7 @@ Defaults to `"data/breeding_db.sqlite"`.}
 design, irrigation type). Defaults to an empty list.}
 }
 \value{
-Invisibly returns `TRUE` on success.
+Invisibly returns `TRUE` on success, or throws an error on failure.
 }
 \description{
 Creates a new field or greenhouse trial record in the database. Flexible metadata

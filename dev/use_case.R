@@ -158,3 +158,6 @@ get_audit_ledger(db_path = db_file, limit = 5)
 
 # Check the inventory status
 get_inventory_status(db_path = db_file)
+
+
+# golem::add_module(name = 'mod_inventory_scripts')

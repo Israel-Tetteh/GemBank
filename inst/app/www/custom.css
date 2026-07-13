@@ -1,0 +1,166 @@
+/* GemBank Modern Scientific Theme */
+
+/* Import modern typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Global Reset & Typography */
+body, .content-wrapper, .main-sidebar, .main-header {
+  font-family: 'Inter', sans-serif !important;
+  background-color: #f4f7f6; /* Soft scientific light gray */
+}
+
+/* Primary Scientific Color Palette */
+:root {
+  --primary-color: #0b5394; /* Deep scientific blue */
+  --secondary-color: #0fa3b1; /* Teal */
+  --accent-color: #f9a03f; /* Warm accent */
+  --light-bg: #ffffff;
+  --dark-text: #2c3e50;
+  --border-radius: 12px;
+  --box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+}
+
+/* Enhancing bs4Dash Cards (Boxes) with Glassmorphism / Soft UI */
+.card, .box {
+  border-radius: var(--border-radius) !important;
+  border: none !important;
+  box-shadow: var(--box-shadow) !important;
+  background: var(--light-bg);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover, .box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08) !important;
+}
+
+.card-header, .box-header {
+  border-top-left-radius: var(--border-radius) !important;
+  border-top-right-radius: var(--border-radius) !important;
+  background-color: var(--light-bg) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+.card-primary.card-outline, .box-primary {
+  border-top: 4px solid var(--primary-color) !important;
+}
+
+.card-info.card-outline, .box-info {
+  border-top: 4px solid var(--secondary-color) !important;
+}
+
+/* Typography styles */
+.card-title, .box-title {
+  font-weight: 600 !important;
+  color: var(--dark-text) !important;
+}
+
+/* Buttons Styling */
+.btn {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color), #1461a8) !important;
+  border: none !important;
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #094074, var(--primary-color)) !important;
+  box-shadow: 0 4px 15px rgba(11, 83, 148, 0.3);
+}
+
+.btn-info {
+  background: linear-gradient(135deg, var(--secondary-color), #14b5c4) !important;
+  border: none !important;
+}
+.btn-info:hover {
+  background: linear-gradient(135deg, #0b828d, var(--secondary-color)) !important;
+  box-shadow: 0 4px 15px rgba(15, 163, 177, 0.3);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #28a745, #34ce57) !important;
+  border: none !important;
+}
+.btn-success:hover {
+  background: linear-gradient(135deg, #218838, #28a745) !important;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+/* Inputs & Form Elements */
+.form-control, .selectize-input {
+  border-radius: 8px !important;
+  border: 1px solid #e0e6ed !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus, .selectize-input.focus {
+  border-color: var(--secondary-color) !important;
+  box-shadow: 0 0 0 0.2rem rgba(15, 163, 177, 0.25) !important;
+}
+
+/* DataTables Styling */
+table.dataTable {
+  border-collapse: collapse !important;
+}
+table.dataTable thead th {
+  border-bottom: 2px solid #e0e6ed !important;
+  color: var(--dark-text);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+table.dataTable tbody td {
+  border-bottom: 1px solid #f0f4f8 !important;
+  padding: 12px 10px !important;
+  color: #4a5568;
+}
+
+table.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {
+  background-color: #f7fafc !important;
+}
+
+/* Sidebar Styling */
+.main-sidebar {
+  background: linear-gradient(180deg, #1c2b36, #2a3f54) !important;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+}
+.sidebar .nav-item .nav-link {
+  border-radius: 8px;
+  margin: 4px 8px;
+  transition: all 0.2s ease;
+}
+.sidebar .nav-item .nav-link:hover {
+  background-color: rgba(255,255,255,0.1) !important;
+  transform: translateX(4px);
+}
+.sidebar .nav-item .nav-link.active {
+  background-color: var(--secondary-color) !important;
+  box-shadow: 0 4px 15px rgba(15, 163, 177, 0.4);
+}
+
+/* Dashboard Header */
+.main-header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+/* Callout adjustments */
+.callout {
+  border-radius: 8px;
+  border-left-width: 4px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  background: white;
+}
+.callout-info {
+  border-left-color: var(--secondary-color) !important;
+}
+.callout-success {
+  border-left-color: #28a745 !important;
+}

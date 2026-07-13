@@ -15,7 +15,7 @@ Defaults to `"data/breeding_db.sqlite"`.}
 \item{unit}{Unit of measurement (e.g., "cm", "kg/ha", "1-5 Scale").}
 }
 \value{
-Invisibly returns `TRUE` on success.
+Invisibly returns `TRUE` on success, or throws an error on failure.
 }
 \description{
 Defines a new phenotypic trait and its associated unit of measurement in the
@@ -24,10 +24,10 @@ database. This standardizes the metrics recorded during trials.
 \examples{
 \dontrun{
 # Use case: Defining standard traits for yield and disease resistance
-add_trait(
+try(add_trait(
   db_path = tempfile(fileext = ".sqlite"),
   trait_name = "Pod_Yield",
   unit = "kg/ha"
-)
+))
 }
 }

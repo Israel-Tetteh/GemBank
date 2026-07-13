@@ -17,7 +17,13 @@ Imports:
     shiny (>= 1.8.0),
     DBI,
     RSQLite,
-    jsonlite
+    bs4Dash (>= 2.0.0),
+    shinyFiles,
+    DT,
+    shinyWidgets,
+    shinyFeedback,
+    waiter,
+    shinyjs
 Encoding: UTF-8
 LazyData: true
 Config/golem/app_name: GemBank

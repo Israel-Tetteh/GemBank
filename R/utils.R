@@ -59,7 +59,7 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
       con,
       "CREATE TABLE IF NOT EXISTS trials (
       trial_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trial_name TEXT NOT NULL,
+      trial_name TEXT NOT NULL UNIQUE,
       trial_loc TEXT NOT NULL,
       start_date DATE,
       metadata TEXT
@@ -86,7 +86,7 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
       con,
       "CREATE TABLE IF NOT EXISTS traits (
       trait_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trait_name TEXT NOT NULL,
+      trait_name TEXT NOT NULL UNIQUE,
       unit TEXT
     );"
     )
@@ -254,26 +254,37 @@ add_germplasm <- function(
 #' @param trait_name Name of the metric or trait being measured (e.g., "Aphid_Damage_Score").
 #' @param unit Unit of measurement (e.g., "cm", "kg/ha", "1-5 Scale").
 #'
-#' @return Invisibly returns `TRUE` on success.
+#' @return Invisibly returns `TRUE` on success, or throws an error on failure.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #' # Use case: Defining standard traits for yield and disease resistance
-#' add_trait(
+#' try(add_trait(
 #'   db_path = tempfile(fileext = ".sqlite"),
 #'   trait_name = "Pod_Yield",
 #'   unit = "kg/ha"
-#' )
+#' ))
 #' }
 add_trait <- function(db_path = "data/breeding_db.sqlite", trait_name, unit) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
 
   query <- "INSERT INTO traits (trait_name, unit) VALUES (?, ?)"
-  DBI::dbExecute(con, query, params = list(trait_name, unit))
-  invisible(TRUE)
+  tryCatch(
+    {
+      DBI::dbExecute(con, query, params = list(trait_name, unit))
+      message(sprintf("Successfully added trait: '%s'", trait_name))
+      invisible(TRUE)
+    },
+    error = function(e) {
+      stop(
+        "Failed to add trait. Ensure trait_name is unique. Error: ",
+        e$message
+      )
+    }
+  )
 }
 
 
@@ -292,7 +303,7 @@ add_trait <- function(db_path = "data/breeding_db.sqlite", trait_name, unit) {
 #' @param metadata_list A named R list of custom trial parameters (e.g., experimental
 #'   design, irrigation type). Defaults to an empty list.
 #'
-#' @return Invisibly returns `TRUE` on success.
+#' @return Invisibly returns `TRUE` on success, or throws an error on failure.
 #'
 #' @export
 #'
@@ -318,20 +329,33 @@ add_trial <- function(
   on.exit(DBI::dbDisconnect(con))
 
   # Serialize metadata to JSON
-  metadata_json <- jsonlite::toJSON(metadata_list, auto_unbox = TRUE)
+  metadata_json <- suppressWarnings({
+    jsonlite::toJSON(metadata_list, auto_unbox = TRUE)
+  })
 
   query <- "INSERT INTO trials (trial_name, trial_loc, start_date, metadata) VALUES (?, ?, ?, ?)"
-  DBI::dbExecute(
-    con,
-    query,
-    params = list(
-      trial_name,
-      trial_loc,
-      as.character(start_date),
-      metadata_json
-    )
+  tryCatch(
+    {
+      DBI::dbExecute(
+        con,
+        query,
+        params = list(
+          trial_name,
+          trial_loc,
+          as.character(start_date),
+          metadata_json
+        )
+      )
+      message(sprintf("Successfully added trial: '%s'", trial_name))
+      invisible(TRUE)
+    },
+    error = function(e) {
+      stop(
+        "Failed to add trial. Ensure trial_name is unique. Error: ",
+        e$message
+      )
+    }
   )
-  invisible(TRUE)
 }
 
 
@@ -579,8 +603,10 @@ add_inventory_deposit <- function(
         params = list(germplasm_id, amount_grams, storage_location)
       )
     } else {
-      update_inv <- "UPDATE inventory SET quantity = quantity + ?, storage_location = ? WHERE germplasm_id = ?"
-      DBI::dbExecute(con, update_inv, params = list(amount_grams, storage_location, germplasm_id))
+      # Subsequent deposits: only add to the quantity. The location remains fixed,
+      # as the schema assumes one inventory record (and thus one location) per germplasm.
+      update_inv <- "UPDATE inventory SET quantity = quantity + ? WHERE germplasm_id = ?"
+      DBI::dbExecute(con, update_inv, params = list(amount_grams, germplasm_id))
     }
 
     log_query <- "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)"
@@ -603,6 +629,53 @@ add_inventory_deposit <- function(
     accession_name
   ))
   invisible(TRUE)
+}
+
+
+################################################################################
+#    SHINY APP HELPERS
+################################################################################
+
+#' @title Get All Accession Names
+#' @description Retrieves a vector of all unique germplasm accession names.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of accession names.
+#' @noRd
+get_all_accessions <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT accession_name FROM germplasm ORDER BY accession_name"
+  )$accession_name
+}
+
+#' @title Get All Trial Names
+#' @description Retrieves a vector of all unique trial names.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of trial names.
+#' @noRd
+get_all_trials <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT trial_name FROM trials ORDER BY trial_name"
+  )$trial_name
+}
+
+#' @title Get All Trait Names
+#' @description Retrieves a vector of all unique trait names.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of trait names.
+#' @noRd
+get_all_traits <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT trait_name FROM traits ORDER BY trait_name"
+  )$trait_name
 }
 
 
