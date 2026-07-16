@@ -69,11 +69,6 @@ mod_setup_ui <- function(id) {
                     multiple = FALSE,
                     class = "btn btn-outline-primary fw-bold w-100 mb-3 rounded-pill"
                   ),
-                  shiny::div(
-                    class = "alert border text-truncate py-2 px-3 m-0 small font-monospace",
-                    style = "background-color: #F8FAFC; color: #475569; border-radius: 8px;",
-                    shiny::textOutput(ns("selected_file_txt"))
-                  )
                 )
               )
             ),
@@ -109,17 +104,6 @@ mod_setup_ui <- function(id) {
                     label = "Target Directory Path",
                     title = "Select working path cluster container",
                     class = "btn btn-outline-secondary fw-bold w-100 mb-3 rounded-pill"
-                  ),
-                  # shiny::div(
-                  #   class = "alert border text-truncate py-2 px-3 mb-3 small font-monospace",
-                  #   style = "background-color: #F8FAFC; color: #475569; border-radius: 8px;",
-                  #   shiny::textOutput(ns("selected_dir_txt"))
-                  # ),
-                  shiny::textInput(
-                    ns("db_filename"),
-                    label = 'Enter filename',
-                    value = "your_database_name.sqlite",
-                    placeholder = "e.g., KNUST_sorghum_2026.sqlite"
                   ),
                   shiny::actionButton(
                     ns("create_btn"),
@@ -189,15 +173,6 @@ mod_setup_server <- function(id, db_state) {
       return(parsed)
     })
 
-    # Render the selected file path for user feedback.
-    output$selected_file_txt <- shiny::renderText({
-      path <- selected_file_path(); if (!is.null(path)) paste("Target File:", basename(path)) else "No file linked."
-    })
-
-    # output$selected_dir_txt <- shiny::renderText({
-    #   path <- selected_dir_path(); if (!is.null(path)) paste("Cluster Root:", basename(path)) else "No workspace directory targeted."
-    # })
-
     # Observer for handling an existing database file selection.
     shiny::observeEvent(selected_file_path(), {
       path <- selected_file_path()
@@ -230,16 +205,7 @@ mod_setup_server <- function(id, db_state) {
         return()
       }
 
-      filename <- trimws(input$db_filename)
-      if (filename == "") {
-        shinyWidgets::show_alert("Warning", "Database filename cannot be empty.", type = "warning")
-        return()
-      }
-
-      # Ensure the filename has a standard .sqlite extension.
-      if (!grepl("\\.(sqlite|db)$", filename, ignore.case = TRUE)) {
-        filename <- paste0(filename, ".sqlite")
-      }
+      filename <- "Gembank_db.sqlite"
 
       target_db_path <- file.path(dir_path, filename)
 
