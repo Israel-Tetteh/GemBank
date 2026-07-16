@@ -1,6 +1,9 @@
 #' Setup Database Module UI
 #' @param id Module id
-#' @import bslib shiny bsicons
+#' @import shiny
+#' @importFrom bslib card card_body card_header layout_column_wrap
+#' @importFrom bsicons bs_icon
+#' @importFrom shinyWidgets show_alert
 #' @noRd
 mod_setup_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -65,12 +68,12 @@ mod_setup_ui <- function(id) {
                     title = "Choose an existing breeding storage cluster",
                     multiple = FALSE,
                     class = "btn btn-outline-primary fw-bold w-100 mb-3 rounded-pill"
+                  ),
+                  shiny::div(
+                    class = "alert border text-truncate py-2 px-3 m-0 small font-monospace",
+                    style = "background-color: #F8FAFC; color: #475569; border-radius: 8px;",
+                    shiny::textOutput(ns("selected_file_txt"))
                   )
-                  # shiny::div(
-                  #   class = "alert border text-truncate py-2 px-3 m-0 small font-monospace",
-                  #   style = "background-color: #F8FAFC; color: #475569; border-radius: 8px;",
-                  #   shiny::textOutput(ns("selected_file_txt"))
-                  # )
                 )
               )
             ),
@@ -112,12 +115,12 @@ mod_setup_ui <- function(id) {
                   #   style = "background-color: #F8FAFC; color: #475569; border-radius: 8px;",
                   #   shiny::textOutput(ns("selected_dir_txt"))
                   # ),
-                  # shiny::textInput(
-                  #   ns("db_filename"),
-                  #   label = NULL,
-                  #   value = "breeding_db.sqlite",
-                  #   placeholder = "e.g., KNUST_sorghum_2026.sqlite"
-                  # ),
+                  shiny::textInput(
+                    ns("db_filename"),
+                    label = 'Enter filename',
+                    value = "your_database_name.sqlite",
+                    placeholder = "e.g., KNUST_sorghum_2026.sqlite"
+                  ),
                   shiny::actionButton(
                     ns("create_btn"),
                     label = "Initialize Schema Architecture",
@@ -144,24 +147,30 @@ mod_setup_server <- function(id, db_state) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # Expand available volumes for Mac/Windows environments to ensure full navigation
-    volumes <- c(
-      Home = path.expand("~"),
-      Desktop = file.path(path.expand("~"), "Desktop"),
-      Documents = file.path(path.expand("~"), "Documents"),
-      Downloads = file.path(path.expand("~"), "Downloads"),
-      Root = "/",
-      shinyFiles::getVolumes()()
-    )
+    # Define robust, cross-platform volumes for shinyFiles navigation
+    volumes <- {
+      os_type <- Sys.info()["sysname"]
+      if (os_type == "Windows") {
+        user_profile <- Sys.getenv("USERPROFILE")
+        # Combine user-friendly locations with all available drive letters
+        c(
+          Home = user_profile,
+          Desktop = file.path(user_profile, "Desktop"),
+          Documents = file.path(user_profile, "Documents"),
+          shinyFiles::getVolumes()()
+        )
+      } else {
+        # For macOS and Linux, provide standard home and root directories
+        c(
+          Home = path.expand("~"),
+          Root = "/"
+        )
+      }
+    }
 
     # Initialize the shinyFiles handlers for file and directory selection.
-    shinyFiles::shinyFileChoose(
-      input,
-      "file_btn",
-      roots = volumes,
-      filetypes = c("sqlite", "db")
-    )
-    shinyFiles::shinyDirChoose(input, "dir_btn", roots = volumes)
+    shinyFiles::shinyFileChoose(input, "file_btn", roots = volumes, filetypes = c("sqlite", "db"))
+    shinyFiles::shinyDirChoose(input, "dir_btn", roots = volumes, allowDirCreate = FALSE)
 
     # Reactive expression to parse the selected file path.
     # This logic handles cases where no file is selected or the dialog is cancelled.
@@ -182,14 +191,12 @@ mod_setup_server <- function(id, db_state) {
 
     # Render the selected file path for user feedback.
     output$selected_file_txt <- shiny::renderText({
-      path <- selected_file_path()
-      if (!is.null(path)) paste("Target File:", basename(path)) else "No file linked."
+      path <- selected_file_path(); if (!is.null(path)) paste("Target File:", basename(path)) else "No file linked."
     })
 
-    output$selected_dir_txt <- shiny::renderText({
-      path <- selected_dir_path()
-      if (!is.null(path)) paste("Cluster Root:", basename(path)) else "No workspace directory targeted."
-    })
+    # output$selected_dir_txt <- shiny::renderText({
+    #   path <- selected_dir_path(); if (!is.null(path)) paste("Cluster Root:", basename(path)) else "No workspace directory targeted."
+    # })
 
     # Observer for handling an existing database file selection.
     shiny::observeEvent(selected_file_path(), {
@@ -207,10 +214,10 @@ mod_setup_server <- function(id, db_state) {
         }, error = function(e) FALSE)
 
         if (is_valid_db) {
-          shiny::showNotification("Secure cluster mounted successfully!", type = "message")
+          shinyWidgets::show_alert("Success", "Secure cluster mounted successfully!", type = "success")
           db_state$path <- path  # Update global state, triggers UI changes in app_server
         } else {
-          shiny::showNotification("Aborted: File path is valid but lacks schema configurations.", type = "error")
+          shinyWidgets::show_alert("Error", "Aborted: File path is valid but lacks schema configurations.", type = "error")
         }
       }
     })
@@ -219,13 +226,13 @@ mod_setup_server <- function(id, db_state) {
     shiny::observeEvent(input$create_btn, {
       dir_path <- selected_dir_path()
       if (is.null(dir_path)) {
-        shiny::showNotification("A root directory must be selected first.", type = "warning")
+        shinyWidgets::show_alert("Warning", "A root directory must be selected first.", type = "warning")
         return()
       }
 
       filename <- trimws(input$db_filename)
       if (filename == "") {
-        shinyFiles::shinyNotification("Aborted: Alphanumeric file title parameter cannot evaluate empty.", type = "warning")
+        shinyWidgets::show_alert("Warning", "Database filename cannot be empty.", type = "warning")
         return()
       }
 
@@ -239,10 +246,10 @@ mod_setup_server <- function(id, db_state) {
       # Call the internal function to initialize the database schema.
       tryCatch({
         init_db(db_path = target_db_path)
-        shiny::showNotification("Schema framework architecture generated successfully!", type = "message")
+        shinyWidgets::show_alert("Success", "Schema framework architecture generated successfully!", type = "success")
         db_state$path <- target_db_path
       }, error = function(e) {
-        shiny::showNotification(paste("Critical Generation Interruption Error:", e$message), type = "error")
+        shinyWidgets::show_alert("Error", paste("Critical Generation Interruption Error:", e$message), type = "error")
       })
     })
   })

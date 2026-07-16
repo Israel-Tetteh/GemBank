@@ -1,6 +1,7 @@
 #' Data Entry Module UI
 #' @param id Module id
-#' @import shiny bslib bsicons
+#' @import shiny
+#' @importFrom shinyWidgets show_alert
 #' @noRd
 mod_data_entry_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -24,6 +25,17 @@ mod_data_entry_ui <- function(id) {
 
     shiny::div(
       style = "max-width: 800px; margin: 0 auto;",
+      bslib::card(
+        class = "shadow-sm border-0 mb-3",
+        bslib::card_body(
+          shiny::textInput(
+            ns("user_name"),
+            shiny::tagList(bsicons::bs_icon("person-badge-fill"), " Breeder's Name:"),
+            placeholder = "e.g., Israel Tetteh",
+            value = "Israel Tetteh"
+          )
+        )
+      ),
       bslib::navset_card_underline(
         id = ns("data_entry_tabs"),
 
@@ -77,15 +89,13 @@ mod_data_entry_ui <- function(id) {
         # ========================================================
         bslib::nav_panel(
           title = shiny::tagList("2. Inventory", bsicons::bs_icon("box-seam")),
+          # This tab is now for DEPOSITS ONLY.
           bslib::card(
             class = "shadow-sm border-0 mt-3",
             bslib::card_body(
               class = "p-4",
               shiny::h5(class = "fw-bold text-info mb-3", "Inventory Deposit"),
-              shiny::p(
-                class = "text-muted small mb-4",
-                "Add physical seeds to your storage locations."
-              ),
+              shiny::p(class = "text-muted small mb-4", "Add physical seeds to your storage locations."),
               bslib::layout_column_wrap(
                 width = 1 / 2,
                 shiny::selectizeInput(
@@ -123,8 +133,7 @@ mod_data_entry_ui <- function(id) {
         # ========================================================
         # TAB 3: TRAITS
         # ========================================================
-        bslib::nav_panel(
-          title = shiny::tagList("3. Traits", bsicons::bs_icon("tag-fill")),
+        bslib::nav_panel(title = shiny::tagList("3. Traits", bsicons::bs_icon("rulers")),
           bslib::card(
             class = "shadow-sm border-0 mt-3",
             bslib::card_body(
@@ -152,7 +161,7 @@ mod_data_entry_ui <- function(id) {
               shiny::actionButton(
                 ns("btn_add_trait"),
                 "Register Trait",
-                class = "btn btn-warning text-white rounded-pill fw-bold float-end px-4",
+                class = "btn btn-warning text-dark rounded-pill fw-bold float-end px-4",
                 style = "background-color: #F59E0B; border: none;"
               )
             )
@@ -162,8 +171,8 @@ mod_data_entry_ui <- function(id) {
         # ========================================================
         # TAB 4: TRIALS
         # ========================================================
-        bslib::nav_panel(
-          title = shiny::tagList("4. Trials", bsicons::bs_icon("map")),
+        bslib::nav_panel(          
+          title = shiny::tagList("4. Trials", bsicons::bs_icon("clipboard-check")),
           bslib::card(
             class = "shadow-sm border-0 mt-3",
             bslib::card_body(
@@ -229,8 +238,8 @@ mod_data_entry_ui <- function(id) {
         # ========================================================
         # TAB 5: PLOTS
         # ========================================================
-        bslib::nav_panel(
-          title = shiny::tagList("5. Plots", bsicons::bs_icon("grid-3x3")),
+        bslib::nav_panel(          
+          title = shiny::tagList("5. Plots", bsicons::bs_icon("grid-3x3-gap-fill")),
           bslib::card(
             class = "shadow-sm border-0 mt-3",
             bslib::card_body(
@@ -240,6 +249,8 @@ mod_data_entry_ui <- function(id) {
                 class = "text-muted small mb-4",
                 "Map a specific seed accession to a physical field plot in a trial."
               ),
+               bslib::layout_column_wrap(
+                width = 1 / 2,
               shiny::selectizeInput(
                 ns("p_trial"),
                 "Select Trial",
@@ -249,7 +260,8 @@ mod_data_entry_ui <- function(id) {
                 ns("p_accession"),
                 "Select Accession",
                 choices = NULL
-              ),
+              )
+            ),
               bslib::layout_column_wrap(
                 width = 1 / 2,
                 shiny::numericInput(
@@ -280,7 +292,7 @@ mod_data_entry_ui <- function(id) {
         # ========================================================
         bslib::nav_panel(
           title = shiny::tagList(
-            "6. Observations",
+            "6. Data",
             bsicons::bs_icon("clipboard-data")
           ),
           bslib::card(
@@ -348,9 +360,6 @@ mod_data_entry_server <- function(id, db_state) {
     # Reactive trigger to force dropdown updates across all components when DB changes
     db_update_trigger <- shiny::reactiveVal(0)
     
-    # Hardcoded current user for the audit log (could be made dynamic later)
-    current_user <- "Local Operator"
-    
     # Observe changes in db_state$path or direct triggers to reload dropdowns
     shiny::observeEvent(list(db_state$path, db_update_trigger()), {
       path <- db_state$path
@@ -378,11 +387,19 @@ mod_data_entry_server <- function(id, db_state) {
       shiny::req(db_state$path)
       tryCatch({
         operation_expr
-        shiny::showNotification(success_msg, type = "message")
+        shinyWidgets::show_alert(
+          title = "Success",
+          text = success_msg,
+          type = "success"
+        )
         # Trigger dropdown refresh globally
         db_update_trigger(db_update_trigger() + 1)
       }, error = function(e) {
-        shiny::showNotification(paste("Error:", e$message), type = "error", duration = 8)
+        shinyWidgets::show_alert(
+          title = "Error",
+          text = e$message,
+          type = "error"
+        )
       })
     }
     
@@ -396,14 +413,14 @@ mod_data_entry_server <- function(id, db_state) {
     
     # 2. Add Inventory Deposit
     shiny::observeEvent(input$btn_add_deposit, {
-      shiny::req(input$inv_accession, input$inv_amount, input$inv_location)
+      shiny::req(input$inv_accession, input$inv_amount, input$inv_location, input$user_name)
       run_db_op("Inventory deposit successful!", {
         add_inventory_deposit(
           db_path = db_state$path,
           accession_name = input$inv_accession,
           amount_grams = input$inv_amount,
           storage_location = trimws(input$inv_location),
-          user_name = current_user,
+          user_name = trimws(input$user_name),
           reason = trimws(input$inv_reason)
         )
       })
@@ -457,7 +474,7 @@ mod_data_entry_server <- function(id, db_state) {
     
     # 6. Add Observation
     shiny::observeEvent(input$btn_add_obs, {
-      shiny::req(input$obs_trial, input$obs_plot, input$obs_trait)
+      shiny::req(input$obs_trial, input$obs_plot, input$obs_trait, input$user_name)
       run_db_op("Observation submitted!", {
         add_observation(
           db_path = db_state$path,
@@ -465,7 +482,7 @@ mod_data_entry_server <- function(id, db_state) {
           plot_number = input$obs_plot,
           trait_name = input$obs_trait,
           value = input$obs_value,
-          user_name = current_user
+          user_name = trimws(input$user_name)
         )
       })
     })

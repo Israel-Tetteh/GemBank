@@ -116,7 +116,7 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
       unit TEXT,
       storage_location TEXT,
       FOREIGN KEY (germplasm_id) REFERENCES germplasm(germplasm_id),
-      UNIQUE (germplasm_id)
+      UNIQUE (germplasm_id, storage_location)
     );"
     )
 
@@ -588,14 +588,16 @@ add_inventory_deposit <- function(
   germplasm_id <- g_res$germplasm_id[1]
 
   DBI::dbWithTransaction(con, {
-    check_query <- "SELECT quantity FROM inventory WHERE germplasm_id = ?"
+    # Check for existing stock AT THE SPECIFIED LOCATION
+    check_query <- "SELECT quantity FROM inventory WHERE germplasm_id = ? AND storage_location = ?"
     current_stock <- DBI::dbGetQuery(
       con,
       check_query,
-      params = list(germplasm_id)
+      params = list(germplasm_id, storage_location)
     )
 
     if (nrow(current_stock) == 0) {
+      # This is a new entry for this germplasm at this location
       insert_inv <- "INSERT INTO inventory (germplasm_id, quantity, unit, storage_location) VALUES (?, ?, 'grams', ?)"
       DBI::dbExecute(
         con,
@@ -603,10 +605,9 @@ add_inventory_deposit <- function(
         params = list(germplasm_id, amount_grams, storage_location)
       )
     } else {
-      # Subsequent deposits: only add to the quantity. The location remains fixed,
-      # as the schema assumes one inventory record (and thus one location) per germplasm.
-      update_inv <- "UPDATE inventory SET quantity = quantity + ? WHERE germplasm_id = ?"
-      DBI::dbExecute(con, update_inv, params = list(amount_grams, germplasm_id))
+      # Stock already exists here; just add to the quantity
+      update_inv <- "UPDATE inventory SET quantity = quantity + ? WHERE germplasm_id = ? AND storage_location = ?"
+      DBI::dbExecute(con, update_inv, params = list(amount_grams, germplasm_id, storage_location))
     }
 
     log_query <- "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)"
@@ -1109,6 +1110,7 @@ get_low_stock <- function(
 #'   Defaults to `"data/breeding_db.sqlite"`.
 #' @param accession_name The unique identifier of the seed line.
 #' @param withdraw_amount Numeric quantity of seeds to remove.
+#' @param storage_location Identifier for the freezer or cold room from which to withdraw.
 #' @param withdraw_unit Unit of the amount (e.g., "g", "grams", "kg", "kilograms").
 #' @param user_name Name of the researcher withdrawing the seeds.
 #' @param reason Details regarding the withdrawal (e.g., "Screenhouse trial control").
@@ -1121,6 +1123,7 @@ get_low_stock <- function(
 #' withdraw_seed(
 #'   db_path = tempfile(fileext = ".sqlite"),
 #'   accession_name = "SC-2026-001",
+#'   storage_location = "Cold_Room_Shelf_A",
 #'   withdraw_amount = 75,
 #'   withdraw_unit = "grams",
 #'   user_name = "Israel Tetteh",
@@ -1131,6 +1134,7 @@ withdraw_seed <- function(
   db_path = "data/breeding_db.sqlite",
   accession_name,
   withdraw_amount,
+  storage_location,
   withdraw_unit,
   user_name,
   reason
@@ -1162,18 +1166,18 @@ withdraw_seed <- function(
     update_query <- "
       UPDATE inventory
       SET quantity = quantity - ?
-      WHERE germplasm_id = ? AND quantity >= ?;
+      WHERE germplasm_id = ? AND storage_location = ? AND quantity >= ?;
     "
     res <- DBI::dbExecute(
       con,
       update_query,
-      params = list(amount_in_grams, germplasm_id, amount_in_grams)
+      params = list(amount_in_grams, germplasm_id, storage_location, amount_in_grams)
     )
 
     # Check if update succeeded
     if (res == 0) {
       stop(
-        "Transaction failed: Insufficient seed quantity in the freezer or seed not deposited yet."
+        "Transaction failed: Insufficient seed quantity at the specified location or location does not exist."
       )
     }
 
@@ -1183,10 +1187,11 @@ withdraw_seed <- function(
       VALUES (?, ?, ?, ?)
     "
     details <- sprintf(
-      "WITHDRAWAL: %s %s of %s. Converted to %s g. Reason: %s",
+      "WITHDRAWAL: %s %s of %s from %s. Converted to %s g. Reason: %s",
       withdraw_amount,
       withdraw_unit,
       accession_name,
+      storage_location,
       amount_in_grams,
       reason
     )

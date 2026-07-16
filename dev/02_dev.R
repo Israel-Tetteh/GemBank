@@ -34,7 +34,7 @@ golem::add_js_file("script")
 golem::add_js_handler("handlers")
 golem::add_css_file("custom")
 golem::add_sass_file("custom")
-golem::add_any_file("file.json")
+golem::add_empty_file("file.json")
 
 ## Add internal datasets ----
 ## If you have data in your package
@@ -54,6 +54,8 @@ devtools::build_vignettes()
 ## Set the code coverage service ("codecov" or "coveralls")
 usethis::use_coverage()
 
+# Create a summary readme for the testthat subdirectory
+# covrpage::covrpage()
 
 ## CI ----
 ## Use this part of the script if you need to set up a CI
@@ -63,8 +65,10 @@ usethis::use_coverage()
 usethis::use_github()
 
 # GitHub Actions
-usethis::use_github_action()
-# Chose one of the three
+# Add a Posit Connect deployment workflow for Shiny apps
+golem::add_github_action()
+# Or use the generic usethis GitHub Actions helpers
+# Choose one of the three
 # See https://usethis.r-lib.org/reference/use_github_action.html
 usethis::use_github_action_check_release()
 usethis::use_github_action_check_standard()
@@ -80,7 +84,8 @@ usethis::use_circleci_badge()
 usethis::use_jenkins()
 
 # GitLab CI
-usethis::use_gitlab_ci()
+# Add a Posit Connect deployment pipeline for Shiny apps
+golem::add_gitlab_ci()
 
 # You're now set! ----
 # go to dev/03_deploy.R

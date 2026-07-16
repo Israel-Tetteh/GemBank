@@ -1,11 +1,11 @@
 default:
   golem_name: GemBank
-  golem_version: 0.1.0
-  app_title: GemBank Seed Management
-  db_path: data/breeding_db.sqlite
+  golem_version: 0.0.0.9000
+  app_prod: no
 
 production:
-  db_path: /var/lib/gembank/breeding_db.sqlite
+  app_prod: yes
 
 dev:
-  db_path: data/breeding_db.sqlite
+  golem_wd: !expr golem::pkg_path()
+

@@ -1,17 +1,21 @@
-#' Inventory Ledger Module UI
+#' Transaction Log Module UI
 #' @param id Module id
-#' @import shiny bslib bsicons DT
+#' @import shiny
+#' @importFrom bslib card card_body card_header layout_column_wrap layout_columns
+#' @importFrom bsicons bs_icon
+#' @importFrom DT renderDT 
+#' @importFrom shinyWidgets show_alert
 #' @noRd
-mod_inventory_ledger_ui <- function(id) {
-  ns <- shiny::NS(id)
+mod_transaction_log_ui <- function(id) {
+  ns <- NS(id)
   
-  shiny::fluidPage(
+  fluidPage(
     style = "background-color: #F8FAFC; padding: 20px;",
     
-    shiny::div(
+    div(
       class = "mb-4 text-center",
-      shiny::h2(class = "fw-bold", style = "color: #0F766E; font-family: 'Outfit', sans-serif;", "Inventory Dashboard"),
-      shiny::p(class = "text-muted", "Monitor real-time seed balances and execute inventory withdrawals.")
+      h2(class = "fw-bold", style = "color: #0F766E; font-family: 'Outfit', sans-serif;", "Transaction Log"),
+      p(class = "text-muted", "Monitor real-time seed balances and execute inventory withdrawals.")
     ),
     
     bslib::layout_columns(
@@ -22,10 +26,10 @@ mod_inventory_ledger_ui <- function(id) {
         class = "shadow-sm border-0",
         bslib::card_header(
           class = "bg-white fw-bold",
-          shiny::tagList(bsicons::bs_icon("table"), " Live Vault Balances")
+          tagList(bsicons::bs_icon("table"), " Live Vault Balances")
         ),
         bslib::card_body(
-          DT::dataTableOutput(ns("inventory_table"))
+          DT::DTOutput(ns("inventory_table"))
         )
       ),
       
@@ -34,54 +38,61 @@ mod_inventory_ledger_ui <- function(id) {
         class = "shadow-sm border-0",
         bslib::card_header(
           class = "bg-white fw-bold text-danger",
-          shiny::tagList(bsicons::bs_icon("box-arrow-up-right"), " Withdraw Seed")
+          tagList(bsicons::bs_icon("box-arrow-up-right"), " Withdraw Seed")
         ),
         bslib::card_body(
           class = "p-4",
-          shiny::p(class = "text-muted small mb-4", "Remove seeds from the cold room for planting, sharing, or testing."),
+          p(class = "text-muted small mb-4", "Remove seeds from the cold room for planting, sharing, or testing."),
           
-          shiny::selectizeInput(
+          selectizeInput(
             ns("w_accession"),
             "Target Accession",
             choices = NULL,
             width = "100%"
           ),
           
+          selectizeInput(
+            ns("w_location"),
+            "Storage Location",
+            choices = NULL, # Will be populated dynamically
+            width = "100%"
+          ),
+          
           bslib::layout_column_wrap(
             width = 1/2,
-            shiny::numericInput(
+            numericInput(
               ns("w_amount"),
               "Amount",
               value = 10,
               min = 0.1,
               width = "100%"
             ),
-            shiny::selectInput(
+            selectInput(
               ns("w_unit"),
               "Unit",
-              choices = c("grams", "kg", "seeds"),
+              choices = c("grams", "kg"),
               selected = "grams",
               width = "100%"
             )
           ),
           
-          shiny::textInput(
+          textInput(
             ns("w_operator"),
-            "Operator Name",
+            "Breeder's Name:",
             placeholder = "e.g., Dr. Kena",
             width = "100%"
           ),
           
-          shiny::textInput(
+          textInput(
             ns("w_reason"),
             "Reason for Withdrawal",
             placeholder = "e.g., Planting 2026 Trial",
             width = "100%"
           ),
           
-          shiny::hr(),
+          hr(),
           
-          shiny::actionButton(
+          actionButton(
             ns("btn_withdraw"),
             "Execute Withdrawal",
             class = "btn btn-danger rounded-pill fw-bold w-100"
@@ -92,21 +103,21 @@ mod_inventory_ledger_ui <- function(id) {
   )
 }
 
-#' Inventory Ledger Module Server
+#' Transaction Log Module Server
 #' @param id Module id
 #' @param db_state A `reactiveValues` object from `app_server` holding the database path.
 #' @noRd
-mod_inventory_ledger_server <- function(id, db_state) {
-  shiny::moduleServer(id, function(input, output, session) {
+mod_transaction_log_server <- function(id, db_state) {
+  moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
     # A reactive trigger to manually refresh data after a database write (e.g., withdrawal).
-    refresh_trigger <- shiny::reactiveVal(0)
+    refresh_trigger <- reactiveVal(0)
     
     # Render the main data table showing current inventory levels.
-    output$inventory_table <- DT::renderDataTable({
+    output$inventory_table <- DT::renderDT({
       path <- db_state$path
-      shiny::req(path)
+      req(path)
       refresh_trigger() # Establish a dependency on the refresh trigger.
       
       tryCatch({
@@ -124,8 +135,8 @@ mod_inventory_ledger_server <- function(id, db_state) {
           class = 'cell-border stripe hover'
         ) |>
           DT::formatStyle(
-            'total_balance',
-            color = DT::styleInterval(50, c('red', 'black')),
+            'quantity',
+            color = DT::styleInterval(c(50, 500), c('red', 'orange', 'black')),
             fontWeight = DT::styleInterval(50, c('bold', 'normal'))
           )
       }, error = function(e) {
@@ -134,49 +145,82 @@ mod_inventory_ledger_server <- function(id, db_state) {
     })
     
     # Observer to update accession choices when the database path or data changes.
-    shiny::observeEvent(list(db_state$path, refresh_trigger()), {
+    observeEvent(list(db_state$path, refresh_trigger()), {
       path <- db_state$path
-      shiny::req(path)
+      req(path)
       
       tryCatch({
         df <- get_inventory_status(path)
-        # Populate the dropdown with accessions currently in the inventory.
-        if(nrow(df) > 0) {
-          acc_choices <- unique(df$accession_name)
-          shiny::updateSelectizeInput(session, "w_accession", choices = acc_choices, server = TRUE)
+        if (nrow(df) > 0) {
+          # Only show accessions that have been physically deposited.
+          acc_choices <- unique(df$accession_name[df$storage_location != "Not Deposited"])
+          updateSelectizeInput(session, "w_accession", choices = acc_choices, server = TRUE)
         }
       }, error = function(e) {
         # Fail silently if the database is empty or an error occurs during the fetch.
       })
     })
     
-    # Observer to handle the 'Execute Withdrawal' button click.
-    shiny::observeEvent(input$btn_withdraw, {
-      shiny::req(input$w_accession, input$w_amount, input$w_operator, input$w_reason)
+    # Observer to dynamically update storage locations based on selected accession.
+    observeEvent(input$w_accession, {
       path <- db_state$path
-      shiny::req(path)
+      accession <- input$w_accession
+      
+      # Ensure inputs are available before proceeding.
+      req(path, accession, accession != "")
+      
+      tryCatch({
+        # Fetch inventory specifically for the selected accession.
+        acc_inventory <- get_inventory_status(
+          db_path = path,
+          target_accession = accession
+        )
+        
+        # Filter for actual, physical storage locations.
+        valid_locations <- acc_inventory$storage_location[acc_inventory$storage_location != "Not Deposited"]
+        
+        # Update the location dropdown with valid choices.
+        updateSelectizeInput(session, "w_location", choices = valid_locations, server = TRUE)
+        
+      }, error = function(e) {
+        updateSelectizeInput(session, "w_location", choices = character(0), server = TRUE)
+      })
+    }, ignoreInit = TRUE) # ignoreInit prevents running on startup before w_accession is set.
+    
+    # Observer to handle the 'Execute Withdrawal' button click.
+    observeEvent(input$btn_withdraw, {
+      req(input$w_accession, input$w_location, input$w_amount, input$w_operator, input$w_reason)
+      path <- db_state$path
+      req(path)
       
       tryCatch({
         withdraw_seed(
           db_path = path,
           accession_name = input$w_accession,
+          storage_location = trimws(input$w_location),
           withdraw_amount = input$w_amount,
           withdraw_unit = input$w_unit,
           user_name = trimws(input$w_operator),
           reason = trimws(input$w_reason)
         )
         
-        shiny::showNotification("Seed withdrawn successfully!", type = "message")
+        shinyWidgets::show_alert(
+          title = "Success",
+          text = "Seed withdrawn successfully!",
+          type = "success"
+        )
         
         # Reset form inputs for the next transaction.
-        shiny::updateNumericInput(session, "w_amount", value = 10)
-        shiny::updateTextInput(session, "w_reason", value = "")
-        
+        updateNumericInput(session, "w_amount", value = 10)
+        updateTextInput(session, "w_reason", value = "")
         # Increment the trigger to refresh the data table and dropdowns.
         refresh_trigger(refresh_trigger() + 1)
-        
       }, error = function(e) {
-        shiny::showNotification(paste("Withdrawal Error:", e$message), type = "error", duration = 8)
+        shinyWidgets::show_alert(
+          title = "Withdrawal Error",
+          text = e$message,
+          type = "error"
+        )
       })
     })
   })

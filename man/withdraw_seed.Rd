@@ -8,6 +8,7 @@ withdraw_seed(
   db_path = "data/breeding_db.sqlite",
   accession_name,
   withdraw_amount,
+  storage_location,
   withdraw_unit,
   user_name,
   reason
@@ -20,6 +21,8 @@ Defaults to `"data/breeding_db.sqlite"`.}
 \item{accession_name}{The unique identifier of the seed line.}
 
 \item{withdraw_amount}{Numeric quantity of seeds to remove.}
+
+\item{storage_location}{Identifier for the freezer or cold room from which to withdraw.}
 
 \item{withdraw_unit}{Unit of the amount (e.g., "g", "grams", "kg", "kilograms").}
 
@@ -41,6 +44,7 @@ amount exceeds current stock.
 withdraw_seed(
   db_path = tempfile(fileext = ".sqlite"),
   accession_name = "SC-2026-001",
+  storage_location = "Cold_Room_Shelf_A",
   withdraw_amount = 75,
   withdraw_unit = "grams",
   user_name = "Israel Tetteh",
