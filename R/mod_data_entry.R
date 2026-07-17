@@ -4,259 +4,232 @@
 #' @importFrom shinyWidgets show_alert
 #' @noRd
 mod_data_entry_ui <- function(id) {
-  ns <- shiny::NS(id)
+  ns <- NS(id)
   
-  shiny::fluidPage(
+  fluidPage(
     # Container styling for modern layout
     style = "background-color: #F8FAFC; padding: 20px;",
 
-    shiny::div(
+    div(
       class = "mb-4 text-center",
-      shiny::h2(
+      h2(
         class = "fw-bold",
         style = "color: #0F766E; font-family: 'Outfit', sans-serif;",
         "Master Registry"
       ),
-      shiny::p(
+      p(
         class = "text-muted",
         "Populate the database sequentially. Changes are immediately saved to the active SQLite connection."
       )
     ),
 
-    shiny::div(
+    div(
       style = "max-width: 800px; margin: 0 auto;",
       bslib::card(
         class = "shadow-sm border-0 mb-3",
         bslib::card_body(
-          shiny::textInput(
+          textInput(
             ns("user_name"),
-            shiny::tagList(bsicons::bs_icon("person-badge-fill"), " Breeder's Name:"),
+            tagList(bsicons::bs_icon("person-badge-fill"), " Breeder's Name:"),
             placeholder = "e.g., Israel Tetteh",
             value = "Israel Tetteh"
           )
         )
       ),
-      bslib::navset_card_underline(
-        id = ns("data_entry_tabs"),
+      bslib::accordion(
+        id = ns("data_entry_accordion"),
+        open = "germplasm",
 
         # ========================================================
         # TAB 1: GERMPLASM
         # ========================================================
-        bslib::nav_panel(
-          title = shiny::tagList("1. Germplasm", bsicons::bs_icon("tree-fill")),
-          bslib::card(
-            class = "shadow-sm border-0 mt-3",
-            bslib::card_body(
-              class = "p-4",
-              shiny::h5(
+        bslib::accordion_panel(
+          title = tagList("1. Germplasm", bsicons::bs_icon("tree-fill")),
+          value = "germplasm",
+              h5(
                 class = "fw-bold text-success mb-3",
                 "Register New Accession"
               ),
-              shiny::p(
-                class = "text-muted small mb-4",
-                "Add a new seed line or variety to the passport database."
-              ),
-              shiny::textInput(
+              p(class = "text-muted small mb-4", "Add a new seed line or variety to the passport database."),
+              textInput(
                 ns("g_name"),
                 "Accession Name (Unique)",
                 placeholder = "e.g., SC-2026-001",
                 width = '100%'
               ),
-              shiny::textInput(
+              textInput(
                 ns("g_pedigree"),
                 "Pedigree / Cross",
                 placeholder = "e.g., Local-Landrace-A",
                 width = '100%'
               ),
-              shiny::textInput(
+              textInput(
                 ns("g_species"),
                 "Species",
                 placeholder = "e.g., Sorghum bicolor",
                 width = '100%'
               ),
-              shiny::hr(),
-              shiny::actionButton(
+              hr(),
+              actionButton(
                 ns("btn_add_germplasm"),
                 "Register Germplasm",
                 class = "btn btn-success rounded-pill fw-bold float-end px-4"
-              )
-            )
           )
         ),
 
         # ========================================================
         # TAB 2: INVENTORY
         # ========================================================
-        bslib::nav_panel(
-          title = shiny::tagList("2. Inventory", bsicons::bs_icon("box-seam")),
-          # This tab is now for DEPOSITS ONLY.
-          bslib::card(
-            class = "shadow-sm border-0 mt-3",
-            bslib::card_body(
-              class = "p-4",
-              shiny::h5(class = "fw-bold text-info mb-3", "Inventory Deposit"),
-              shiny::p(class = "text-muted small mb-4", "Add physical seeds to your storage locations."),
+        bslib::accordion_panel(
+          title = tagList("2. Inventory", bsicons::bs_icon("box-seam")),
+          value = "inventory",
+              h5(class = "fw-bold text-info mb-3", "Inventory Deposit"),
+              p(class = "text-muted small mb-4", "Add physical seeds to a storage location."),
               bslib::layout_column_wrap(
                 width = 1 / 2,
-                shiny::selectizeInput(
+                selectizeInput(
                   ns("inv_accession"),
                   "Select Accession",
                   choices = NULL
                 ),
-                shiny::numericInput(
+                numericInput(
                   ns("inv_amount"),
                   "Amount (grams)",
                   value = 100,
                   min = 1
                 ),
-                shiny::textInput(
+                textInput(
                   ns("inv_location"),
                   "Storage Location",
                   placeholder = "e.g., Cold_Room_Shelf_A"
                 ),
-                shiny::textInput(
+                textInput(
                   ns("inv_reason"),
                   "Reason for Deposit",
                   placeholder = "e.g., 2026 Harvest"
                 )
               ),
-              shiny::hr(),
-              shiny::actionButton(
+              hr(),
+              actionButton(
                 ns("btn_add_deposit"),
                 "Deposit to Inventory",
                 class = "btn btn-info text-white rounded-pill fw-bold float-end px-4"
-              )
-            )
           )
         ),
 
         # ========================================================
         # TAB 3: TRAITS
         # ========================================================
-        bslib::nav_panel(title = shiny::tagList("3. Traits", bsicons::bs_icon("rulers")),
-          bslib::card(
-            class = "shadow-sm border-0 mt-3",
-            bslib::card_body(
-              class = "p-4",
-              shiny::h5(
+        bslib::accordion_panel(
+          title = tagList("3. Traits", bsicons::bs_icon("rulers")),
+          value = "traits",
+              h5(
                 class = "fw-bold text-warning mb-3",
                 style = "color: #D97706 !important;",
                 "Define Trait Vocabulary"
               ),
-              shiny::p(
-                class = "text-muted small mb-4",
-                "Define a standard phenotypic trait before recording it in the field."
-              ),
-              shiny::textInput(
+              p(class = "text-muted small mb-4", "Define a standard phenotypic trait before recording it."),
+              selectizeInput(
                 ns("tr_name"),
-                "Trait Name (Unique)",
-                placeholder = "e.g., Awn_Length"
+                "Trait Name (Select or Create)",
+                choices = NULL,
+                options = list(
+                  create = TRUE,
+                  placeholder = "e.g., Awn_Length"
+                )
               ),
-              shiny::textInput(
+              textInput(
                 ns("tr_unit"),
                 "Unit of Measurement",
                 placeholder = "e.g., cm, kg/ha, Score(1-5)"
               ),
-              shiny::hr(),
-              shiny::actionButton(
+              hr(),
+              actionButton(
                 ns("btn_add_trait"),
                 "Register Trait",
                 class = "btn btn-warning text-dark rounded-pill fw-bold float-end px-4",
                 style = "background-color: #F59E0B; border: none;"
-              )
-            )
           )
         ),
 
         # ========================================================
         # TAB 4: TRIALS
         # ========================================================
-        bslib::nav_panel(          
-          title = shiny::tagList("4. Trials", bsicons::bs_icon("clipboard-check")),
-          bslib::card(
-            class = "shadow-sm border-0 mt-3",
-            bslib::card_body(
-              class = "p-4",
-              shiny::h5(
+        bslib::accordion_panel(
+          title = tagList("4. Trials", bsicons::bs_icon("clipboard-check")),
+          value = "trials",
+              h5(
                 class = "fw-bold text-primary mb-3",
                 "Create Field Trial"
               ),
-              shiny::p(
-                class = "text-muted small mb-4",
-                "Initialize an experimental field or greenhouse trial environment."
-              ),
+              p(class = "text-muted small mb-4", "Initialize an experimental field or greenhouse trial."),
               bslib::layout_column_wrap(
                 width = 1 / 2,
-                shiny::textInput(
+                textInput(
                   ns("t_name"),
                   "Trial Name (Unique)",
                   placeholder = "e.g., 2026_Yield_Test"
                 ),
-                shiny::textInput(
+                textInput(
                   ns("t_loc"),
                   "Trial Location",
                   placeholder = "e.g., KNUST_Agric_Field"
                 ),
-                shiny::dateInput(
+                dateInput(
                   ns("t_date"),
                   "Start Date",
                   format = "yyyy-mm-dd"
                 )
               ),
-              shiny::tags$label(
+              tags$label(
                 "Trial Metadata",
                 class = "control-label mt-3 fw-bold"
               ),
               bslib::layout_column_wrap(
                 width = 1 / 2,
-                shiny::textInput(
+                textInput(
                   ns("t_meta_design"),
                   "Experimental Design",
                   placeholder = "e.g., Alpha Lattice"
                 ),
-                shiny::textInput(
+                textInput(
                   ns("t_meta_dim"),
                   "Plot Dimensions",
                   placeholder = "e.g., 3m x 0.25m"
                 ),
-                shiny::textInput(
+                textInput(
                   ns("t_meta_sup"),
                   "Supervisor",
                   placeholder = "e.g., Dr. Wireko Kena"
                 )
               ),
-              shiny::hr(),
-              shiny::actionButton(
+              hr(),
+              actionButton(
                 ns("btn_add_trial"),
                 "Initialize Trial",
                 class = "btn btn-primary rounded-pill fw-bold float-end px-4"
-              )
-            )
           )
         ),
 
         # ========================================================
         # TAB 5: PLOTS
         # ========================================================
-        bslib::nav_panel(          
-          title = shiny::tagList("5. Plots", bsicons::bs_icon("grid-3x3-gap-fill")),
-          bslib::card(
-            class = "shadow-sm border-0 mt-3",
-            bslib::card_body(
-              class = "p-4",
-              shiny::h5(class = "fw-bold text-secondary mb-3", "Assign Plot"),
-              shiny::p(
+        bslib::accordion_panel(
+          title = tagList("5. Plots", bsicons::bs_icon("grid-3x3-gap-fill")),
+          value = "plots",
+              h5(class = "fw-bold text-secondary mb-3", "Assign Plot"),
+              p(
                 class = "text-muted small mb-4",
-                "Map a specific seed accession to a physical field plot in a trial."
+                "Map a seed accession to a physical plot in a trial."
               ),
                bslib::layout_column_wrap(
                 width = 1 / 2,
-              shiny::selectizeInput(
+              selectizeInput(
                 ns("p_trial"),
                 "Select Trial",
                 choices = NULL
               ),
-              shiny::selectizeInput(
+              selectizeInput(
                 ns("p_accession"),
                 "Select Accession",
                 choices = NULL
@@ -264,57 +237,46 @@ mod_data_entry_ui <- function(id) {
             ),
               bslib::layout_column_wrap(
                 width = 1 / 2,
-                shiny::numericInput(
+                numericInput(
                   ns("p_number"),
                   "Plot Number",
                   value = 101,
                   min = 1
                 ),
-                shiny::numericInput(
+                numericInput(
                   ns("p_block"),
                   "Block / Rep",
                   value = 1,
                   min = 1
                 )
               ),
-              shiny::hr(),
-              shiny::actionButton(
+              hr(),
+              actionButton(
                 ns("btn_add_plot"),
                 "Create Plot Record",
                 class = "btn btn-secondary rounded-pill fw-bold float-end px-4"
-              )
-            )
           )
         ),
 
         # ========================================================
         # TAB 6: OBSERVATIONS
         # ========================================================
-        bslib::nav_panel(
-          title = shiny::tagList(
-            "6. Data",
-            bsicons::bs_icon("clipboard-data")
-          ),
-          bslib::card(
-            class = "shadow-sm border-0 mt-3",
-            bslib::card_body(
-              class = "p-4",
-              shiny::h5(
+        bslib::accordion_panel(
+          title = tagList("6. Data", bsicons::bs_icon("clipboard-data")),
+          value = "observations",
+              h5(
                 class = "fw-bold text-danger mb-3",
                 "Record Observation"
               ),
-              shiny::p(
-                class = "text-muted small mb-4",
-                "Enter phenotypic data measured from a specific plot."
-              ),
+              p(class = "text-muted small mb-4", "Enter phenotypic data from a specific plot."),
               bslib::layout_column_wrap(
                 width = 1 / 2,
-                shiny::selectizeInput(
+                selectizeInput(
                   ns("obs_trial"),
                   "Target Trial",
                   choices = NULL
                 ),
-                shiny::numericInput(
+                numericInput(
                   ns("obs_plot"),
                   "Plot Number",
                   value = 101,
@@ -323,25 +285,23 @@ mod_data_entry_ui <- function(id) {
               ),
               bslib::layout_column_wrap(
                 width = 1 / 2,
-                shiny::selectizeInput(
+                selectizeInput(
                   ns("obs_trait"),
                   "Target Trait",
                   choices = NULL
                 ),
-                shiny::numericInput(
+                numericInput(
                   ns("obs_value"),
                   "Measured Value",
                   value = 0,
                   step = 0.1
                 )
               ),
-              shiny::hr(),
-              shiny::actionButton(
+              hr(),
+              actionButton(
                 ns("btn_add_obs"),
                 "Submit Measurement",
                 class = "btn btn-danger rounded-pill fw-bold float-end px-4"
-              )
-            )
           )
         )
       )
@@ -354,37 +314,65 @@ mod_data_entry_ui <- function(id) {
 #' @param db_state Reactive variable holding the current DB path
 #' @noRd
 mod_data_entry_server <- function(id, db_state) {
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    # Reactive value to store the full trait table (name + unit)
+    all_traits_data <- reactiveVal(data.frame())
     
     # Reactive trigger to force dropdown updates across all components when DB changes
-    db_update_trigger <- shiny::reactiveVal(0)
+    db_update_trigger <- reactiveVal(0)
     
     # Observe changes in db_state$path or direct triggers to reload dropdowns
-    shiny::observeEvent(list(db_state$path, db_update_trigger()), {
+    observeEvent(list(db_state$path, db_update_trigger()), {
       path <- db_state$path
-      shiny::req(path)
+      req(path)
       
       if (file.exists(path)) {
         tryCatch({
           acc_list <- get_all_accessions(path)
           trial_list <- get_all_trials(path)
-          trait_list <- get_all_traits(path)
+
+          # Fetch traits with units, store the data, and get the names for dropdowns
+          traits_df <- get_all_traits_with_units(path)
+          all_traits_data(traits_df)
+          trait_list <- traits_df$trait_name
           
-          shiny::updateSelectizeInput(session, "inv_accession", choices = acc_list, server = TRUE)
-          shiny::updateSelectizeInput(session, "p_accession", choices = acc_list, server = TRUE)
-          shiny::updateSelectizeInput(session, "p_trial", choices = trial_list, server = TRUE)
-          shiny::updateSelectizeInput(session, "obs_trial", choices = trial_list, server = TRUE)
-          shiny::updateSelectizeInput(session, "obs_trait", choices = trait_list, server = TRUE)
+          updateSelectizeInput(session, "inv_accession", choices = acc_list, server = TRUE)
+          updateSelectizeInput(session, "p_accession", choices = acc_list, server = TRUE)
+          updateSelectizeInput(session, "p_trial", choices = trial_list, server = TRUE)
+          updateSelectizeInput(session, "obs_trial", choices = trial_list, server = TRUE)
+          updateSelectizeInput(session, "obs_trait", choices = trait_list, server = TRUE)
+          updateSelectizeInput(session, "tr_name", choices = trait_list, server = TRUE)
+
         }, error = function(e) {
           # Silently ignore errors during initialization of an empty DB
         })
       }
     })
+
+    # When a trait is selected or created, auto-fill its unit if it exists.
+    observeEvent(input$tr_name, {
+      selected_trait <- trimws(input$tr_name)
+      traits_df <- all_traits_data()
+
+      req(selected_trait != "")
+
+      # Find the selected trait in our stored data
+      trait_info <- traits_df[traits_df$trait_name == selected_trait, ]
+
+      if (nrow(trait_info) == 1) {
+        # It's an existing trait, so auto-fill the unit
+        updateTextInput(session, "tr_unit", value = trait_info$unit)
+      } else {
+        # It's a new trait, so clear the unit field for the user to fill
+        updateTextInput(session, "tr_unit", value = "")
+      }
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
     
     # Helper to execute DB operations safely with notifications
     run_db_op <- function(success_msg, operation_expr) {
-      shiny::req(db_state$path)
+      req(db_state$path)
       tryCatch({
         operation_expr
         shinyWidgets::show_alert(
@@ -404,16 +392,16 @@ mod_data_entry_server <- function(id, db_state) {
     }
     
     # 1. Add Germplasm
-    shiny::observeEvent(input$btn_add_germplasm, {
-      shiny::req(input$g_name, input$g_species)
+    observeEvent(input$btn_add_germplasm, {
+      req(input$g_name, input$g_species)
       run_db_op("Germplasm registered!", {
         add_germplasm(db_state$path, trimws(input$g_name), trimws(input$g_pedigree), trimws(input$g_species))
       })
     })
     
     # 2. Add Inventory Deposit
-    shiny::observeEvent(input$btn_add_deposit, {
-      shiny::req(input$inv_accession, input$inv_amount, input$inv_location, input$user_name)
+    observeEvent(input$btn_add_deposit, {
+      req(input$inv_accession, input$inv_amount, input$inv_location, input$user_name)
       run_db_op("Inventory deposit successful!", {
         add_inventory_deposit(
           db_path = db_state$path,
@@ -427,8 +415,8 @@ mod_data_entry_server <- function(id, db_state) {
     })
     
     # 3. Add Trial
-    shiny::observeEvent(input$btn_add_trial, {
-      shiny::req(input$t_name, input$t_loc)
+    observeEvent(input$btn_add_trial, {
+      req(input$t_name, input$t_loc)
       run_db_op("Trial initialized!", {
         # Construct metadata list based on user text inputs
         meta <- list()
@@ -447,8 +435,8 @@ mod_data_entry_server <- function(id, db_state) {
     })
     
     # 4. Add Plot
-    shiny::observeEvent(input$btn_add_plot, {
-      shiny::req(input$p_trial, input$p_accession, input$p_number, input$p_block)
+    observeEvent(input$btn_add_plot, {
+      req(input$p_trial, input$p_accession, input$p_number, input$p_block)
       run_db_op("Plot record created!", {
         add_plot(
           db_path = db_state$path,
@@ -461,8 +449,8 @@ mod_data_entry_server <- function(id, db_state) {
     })
     
     # 5. Add Trait
-    shiny::observeEvent(input$btn_add_trait, {
-      shiny::req(input$tr_name, input$tr_unit)
+    observeEvent(input$btn_add_trait, {
+      req(input$tr_name, input$tr_unit)
       run_db_op("Trait registered!", {
         add_trait(
           db_path = db_state$path,
@@ -473,8 +461,8 @@ mod_data_entry_server <- function(id, db_state) {
     })
     
     # 6. Add Observation
-    shiny::observeEvent(input$btn_add_obs, {
-      shiny::req(input$obs_trial, input$obs_plot, input$obs_trait, input$user_name)
+    observeEvent(input$btn_add_obs, {
+      req(input$obs_trial, input$obs_plot, input$obs_trait, input$user_name)
       run_db_op("Observation submitted!", {
         add_observation(
           db_path = db_state$path,

@@ -228,7 +228,11 @@ add_germplasm <- function(
       DBI::dbExecute(
         con,
         query,
-        params = list(accession_name, pedigree, species)
+        params = list(
+          tolower(trimws(accession_name)),
+          tolower(trimws(pedigree)),
+          tolower(trimws(species))
+        )
       )
       message(sprintf("Successfully added germplasm: '%s'", accession_name))
       invisible(TRUE)
@@ -274,7 +278,11 @@ add_trait <- function(db_path = "data/breeding_db.sqlite", trait_name, unit) {
   query <- "INSERT INTO traits (trait_name, unit) VALUES (?, ?)"
   tryCatch(
     {
-      DBI::dbExecute(con, query, params = list(trait_name, unit))
+      DBI::dbExecute(
+        con,
+        query,
+        params = list(tolower(trimws(trait_name)), tolower(trimws(unit)))
+      )
       message(sprintf("Successfully added trait: '%s'", trait_name))
       invisible(TRUE)
     },
@@ -329,8 +337,11 @@ add_trial <- function(
   on.exit(DBI::dbDisconnect(con))
 
   # Serialize metadata to JSON
+  metadata_list_lower <- lapply(metadata_list, function(x) {
+    if (is.character(x)) tolower(trimws(x)) else x
+  })
   metadata_json <- suppressWarnings({
-    jsonlite::toJSON(metadata_list, auto_unbox = TRUE)
+    jsonlite::toJSON(metadata_list_lower, auto_unbox = TRUE)
   })
 
   query <- "INSERT INTO trials (trial_name, trial_loc, start_date, metadata) VALUES (?, ?, ?, ?)"
@@ -340,8 +351,8 @@ add_trial <- function(
         con,
         query,
         params = list(
-          trial_name,
-          trial_loc,
+          tolower(trimws(trial_name)),
+          tolower(trimws(trial_loc)),
           as.character(start_date),
           metadata_json
         )
@@ -399,7 +410,7 @@ add_plot <- function(
   t_res <- DBI::dbGetQuery(
     con,
     "SELECT trial_id FROM trials WHERE trial_name = ?",
-    params = list(trial_name)
+    params = list(tolower(trimws(trial_name)))
   )
   if (nrow(t_res) == 0) {
     stop("Trial name not found in the database.")
@@ -410,7 +421,7 @@ add_plot <- function(
   g_res <- DBI::dbGetQuery(
     con,
     "SELECT germplasm_id FROM germplasm WHERE accession_name = ?",
-    params = list(accession_name)
+    params = list(tolower(trimws(accession_name)))
   )
   if (nrow(g_res) == 0) {
     stop("Accession name not found in the database.")
@@ -474,7 +485,11 @@ add_observation <- function(
     JOIN germplasm g ON p.germplasm_id = g.germplasm_id
     WHERE tr.trial_name = ? AND p.plot_number = ?
   "
-  p_res <- DBI::dbGetQuery(con, p_query, params = list(trial_name, plot_number))
+  p_res <- DBI::dbGetQuery(
+    con,
+    p_query,
+    params = list(tolower(trimws(trial_name)), plot_number)
+  )
   if (nrow(p_res) == 0) {
     stop("Plot number not found for that trial.")
   }
@@ -485,7 +500,7 @@ add_observation <- function(
   t_res <- DBI::dbGetQuery(
     con,
     "SELECT trait_id FROM traits WHERE trait_name = ?",
-    params = list(trait_name)
+    params = list(tolower(trimws(trait_name)))
   )
   if (nrow(t_res) == 0) {
     stop("Trait name not found in the database.")
@@ -521,7 +536,7 @@ add_observation <- function(
     # Format log details
     log_details <- sprintf(
       "Recorded %s: %s for Plot %s (%s)",
-      trait_name,
+      tolower(trimws(trait_name)),
       value,
       plot_number,
       acc_name
@@ -529,7 +544,7 @@ add_observation <- function(
     DBI::dbExecute(
       con,
       "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)",
-      params = list("observations", action_type, user_name, log_details)
+      params = list("observations", action_type, tolower(trimws(user_name)), log_details)
     )
   })
 
@@ -576,11 +591,17 @@ add_inventory_deposit <- function(
   on.exit(DBI::dbDisconnect(con))
   DBI::dbExecute(con, "PRAGMA foreign_keys = ON;")
 
+  # Coerce inputs to lowercase for consistency
+  accession_name_clean <- tolower(trimws(accession_name))
+  storage_location_clean <- tolower(trimws(storage_location))
+  user_name_clean <- tolower(trimws(user_name))
+  reason_clean <- tolower(trimws(reason))
+
   # Get germplasm ID
   g_res <- DBI::dbGetQuery(
     con,
     "SELECT germplasm_id FROM germplasm WHERE accession_name = ?",
-    params = list(accession_name)
+    params = list(accession_name_clean)
   )
   if (nrow(g_res) == 0) {
     stop("Accession name not found in the database.")
@@ -593,7 +614,7 @@ add_inventory_deposit <- function(
     current_stock <- DBI::dbGetQuery(
       con,
       check_query,
-      params = list(germplasm_id, storage_location)
+      params = list(germplasm_id, storage_location_clean)
     )
 
     if (nrow(current_stock) == 0) {
@@ -602,33 +623,95 @@ add_inventory_deposit <- function(
       DBI::dbExecute(
         con,
         insert_inv,
-        params = list(germplasm_id, amount_grams, storage_location)
+        params = list(germplasm_id, amount_grams, storage_location_clean)
       )
     } else {
       # Stock already exists here; just add to the quantity
       update_inv <- "UPDATE inventory SET quantity = quantity + ? WHERE germplasm_id = ? AND storage_location = ?"
-      DBI::dbExecute(con, update_inv, params = list(amount_grams, germplasm_id, storage_location))
+      DBI::dbExecute(con, update_inv, params = list(amount_grams, germplasm_id, storage_location_clean))
     }
 
     log_query <- "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)"
     details <- sprintf(
       "DEPOSIT: %s grams of %s. Reason: %s",
       amount_grams,
-      accession_name,
-      reason
+      accession_name_clean,
+      reason_clean
     )
     DBI::dbExecute(
       con,
       log_query,
-      params = list("inventory", "DEPOSIT", user_name, details)
+      params = list("inventory", "DEPOSIT", user_name_clean, details)
     )
   })
-
+  
   message(sprintf(
     "Successfully deposited %s grams of '%s' into inventory.",
     amount_grams,
     accession_name
   ))
+  invisible(TRUE)
+}
+
+#' @title Update Germplasm Details
+#'
+#' @description
+#' Updates the details of an existing germplasm record and logs the change.
+#'
+#' @param db_path Path to the SQLite file.
+#' @param accession_name The unique identifier of the seed line to update.
+#' @param new_pedigree The new pedigree value.
+#' @param new_species The new species value.
+#' @param user_name The name of the user making the change.
+#'
+#' @return Invisibly returns `TRUE` on success.
+#' @export
+update_germplasm <- function(db_path, accession_name, new_pedigree, new_species, user_name) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbExecute(con, "PRAGMA foreign_keys = ON;")
+
+  # Clean inputs
+  accession_name_clean <- tolower(trimws(accession_name))
+  new_pedigree_clean <- tolower(trimws(new_pedigree))
+  new_species_clean <- tolower(trimws(new_species))
+  user_name_clean <- tolower(trimws(user_name))
+
+  DBI::dbWithTransaction(con, {
+    # Get current state for logging
+    current_data <- DBI::dbGetQuery(
+      con,
+      "SELECT pedigree, species FROM germplasm WHERE accession_name = ?",
+      params = list(accession_name_clean)
+    )
+
+    if (nrow(current_data) == 0) {
+      stop("Update failed: Accession name not found.")
+    }
+
+    # Perform the update
+    update_query <- "UPDATE germplasm SET pedigree = ?, species = ? WHERE accession_name = ?"
+    res <- DBI::dbExecute(
+      con,
+      update_query,
+      params = list(new_pedigree_clean, new_species_clean, accession_name_clean)
+    )
+
+    # Log the transaction
+    details <- sprintf(
+      "UPDATE %s: pedigree from '%s' to '%s'; species from '%s' to '%s'",
+      accession_name_clean,
+      current_data$pedigree, new_pedigree_clean,
+      current_data$species, new_species_clean
+    )
+
+    DBI::dbExecute(
+      con,
+      "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)",
+      params = list("germplasm", "UPDATE", user_name_clean, details)
+    )
+  })
+
   invisible(TRUE)
 }
 
@@ -679,6 +762,115 @@ get_all_traits <- function(db_path) {
   )$trait_name
 }
 
+#' @title Get All Traits with Units
+#' @description Retrieves a data frame of all unique trait names and their units.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A data frame with 'trait_name' and 'unit' columns.
+#' @noRd
+get_all_traits_with_units <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT trait_name, unit FROM traits ORDER BY trait_name"
+  )
+}
+
+#' @title Get Raw Data For a Specific Accession
+#' @description Extracts all raw, plot-level field data for a single accession across all trials.
+#' @param db_path Path to the SQLite file.
+#' @param accession_name Name of the specific accession to extract.
+#' @return A single data frame of all observations for the accession.
+#' @importFrom dplyr bind_rows
+#' @noRd
+get_raw_accession_data <- function(db_path, accession_name) {
+  # This function returns a list of data frames, one for each trial
+  field_books <- get_field_book(db_path = db_path, accession_name = accession_name)
+  
+  if (length(field_books) == 0) {
+    return(data.frame())
+  }
+  
+  # Combine the list of data frames into a single data frame
+  dplyr::bind_rows(field_books)
+}
+
+#' @title Get Accession-Specific Audit Ledger
+#' @description Retrieves transaction log entries relevant to a specific accession.
+#' @param db_path Path to the SQLite file.
+#' @param accession_name The accession name to search for in the log details.
+#' @return A data frame of relevant log entries.
+#' @noRd
+get_accession_ledger <- function(db_path, accession_name) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  
+  query <- "
+    SELECT timestamp, table_name, action_type, user_name, details
+    FROM transaction_log
+    WHERE details LIKE ?
+    ORDER BY timestamp DESC
+  "
+  
+  search_pattern <- paste0("%", tolower(trimws(accession_name)), "%")
+  result <- DBI::dbGetQuery(con, query, params = list(search_pattern))
+  return(result)
+}
+
+#' @title Get All Species Names
+#' @description Retrieves a vector of all unique species names.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of species names.
+#' @noRd
+get_all_species <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT species FROM germplasm ORDER BY species"
+  )$species
+}
+
+#' @title Get Accessions by Species
+#' @description Retrieves a data frame of all accessions for a given species.
+#' @param db_path Path to the SQLite file.
+#' @param species_name The species to filter by.
+#' @return A data frame with accession_name and pedigree.
+#' @noRd
+get_accessions_by_species <- function(db_path, species_name) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT accession_name, pedigree FROM germplasm WHERE species = ? ORDER BY accession_name",
+    params = list(tolower(trimws(species_name)))
+  )
+}
+
+#' @title Get Inventory by Species
+#' @description Retrieves inventory details for all accessions of a given species.
+#' @param db_path Path to the SQLite file.
+#' @param species_name The species to filter by.
+#' @return A data frame with inventory details.
+#' @noRd
+get_inventory_by_species <- function(db_path, species_name) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  
+  query <- "
+    SELECT 
+      g.accession_name, 
+      COALESCE(i.quantity, 0) AS quantity, 
+      COALESCE(i.unit, 'grams') AS unit, 
+      COALESCE(i.storage_location, 'Not Deposited') AS storage_location
+    FROM germplasm g
+    LEFT JOIN inventory i ON g.germplasm_id = i.germplasm_id
+    WHERE g.species = ?
+    ORDER BY g.accession_name, i.storage_location
+  "
+  
+  DBI::dbGetQuery(con, query, params = list(tolower(trimws(species_name))))
+}
 
 ################################################################################
 #    DATA RETRIEVAL & REPORTING
@@ -731,7 +923,7 @@ get_inventory_status <- function(
 
   if (!is.null(target_accession)) {
     query <- paste0(query, " WHERE g.accession_name = ?")
-    result <- DBI::dbGetQuery(con, query, params = list(target_accession))
+    result <- DBI::dbGetQuery(con, query, params = list(tolower(trimws(target_accession))))
   } else {
     result <- DBI::dbGetQuery(con, query)
   }
@@ -797,7 +989,7 @@ get_germplasm_passport <- function(
     ORDER BY tr.start_date DESC
   "
 
-  result <- DBI::dbGetQuery(con, query, params = list(target_accession))
+  result <- DBI::dbGetQuery(con, query, params = list(tolower(trimws(target_accession))))
   return(result)
 }
 
@@ -862,7 +1054,7 @@ get_trial_data <- function(
     WHERE tr.trial_name = ?
   "
 
-  raw_data <- DBI::dbGetQuery(con, query, params = list(target_trial_name))
+  raw_data <- DBI::dbGetQuery(con, query, params = list(tolower(trimws(target_trial_name))))
 
   if (nrow(raw_data) == 0) {
     message("No data found for the specified trial.")
@@ -984,12 +1176,12 @@ get_field_book <- function(
   # Apply filters
   if (!is.null(trial_name)) {
     query <- paste0(query, " AND tr.trial_name = ?")
-    params <- append(params, trial_name)
+    params <- append(params, tolower(trimws(trial_name)))
   }
 
   if (!is.null(accession_name)) {
     query <- paste0(query, " AND g.accession_name = ?")
-    params <- append(params, accession_name)
+    params <- append(params, tolower(trimws(accession_name)))
   }
 
   raw_data <- DBI::dbGetQuery(con, query, params = params)
@@ -1143,18 +1335,24 @@ withdraw_seed <- function(
   on.exit(DBI::dbDisconnect(con))
   DBI::dbExecute(con, "PRAGMA foreign_keys = ON;")
 
+  # Coerce inputs to lowercase for consistency
+  accession_name_clean <- tolower(trimws(accession_name))
+  storage_location_clean <- tolower(trimws(storage_location))
+  user_name_clean <- tolower(trimws(user_name))
+  reason_clean <- tolower(trimws(reason))
+  unit_lower <- tolower(trimws(withdraw_unit))
+
   g_res <- DBI::dbGetQuery(
     con,
     "SELECT germplasm_id FROM germplasm WHERE accession_name = ?",
-    params = list(accession_name)
+    params = list(accession_name_clean)
   )
 
   if (nrow(g_res) == 0) {
     stop("Accession name not found in the database. Please check the spelling.")
   }
   germplasm_id <- g_res$germplasm_id[1]
-
-  unit_lower <- tolower(withdraw_unit)
+  
   amount_in_grams <- if (unit_lower %in% c("kg", "kilogram", "kilograms")) {
     withdraw_amount * 1000
   } else {
@@ -1171,7 +1369,7 @@ withdraw_seed <- function(
     res <- DBI::dbExecute(
       con,
       update_query,
-      params = list(amount_in_grams, germplasm_id, storage_location, amount_in_grams)
+      params = list(amount_in_grams, germplasm_id, storage_location_clean, amount_in_grams)
     )
 
     # Check if update succeeded
@@ -1189,20 +1387,20 @@ withdraw_seed <- function(
     details <- sprintf(
       "WITHDRAWAL: %s %s of %s from %s. Converted to %s g. Reason: %s",
       withdraw_amount,
-      withdraw_unit,
-      accession_name,
-      storage_location,
+      unit_lower,
+      accession_name_clean,
+      storage_location_clean,
       amount_in_grams,
-      reason
+      reason_clean
     )
 
     DBI::dbExecute(
       con,
       log_query,
-      params = list("inventory", "WITHDRAWAL", user_name, details)
+      params = list("inventory", "WITHDRAWAL", user_name_clean, details)
     )
   })
-
+  
   message(sprintf(
     "Successfully withdrew %s %s of '%s'. Inventory updated.",
     withdraw_amount,

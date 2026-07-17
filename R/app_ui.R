@@ -37,6 +37,9 @@ app_ui <- function(request) {
       # Live indicator box tracking the active local file connection
       shiny::uiOutput("sidebar_status_box"),
 
+      # Placeholder for the conditional disconnect button
+      shiny::uiOutput("disconnect_button_ui"),
+
       shiny::hr(),
       div(
         style = "font-size: 0.8rem; color: #6c757d;",
@@ -57,6 +60,7 @@ app_ui <- function(request) {
       # Tab A: Storage Connection Node (Always visible)
       bslib::nav_panel(
         title = "Database Connection",
+        value = "db_connection_tab",
         icon = bsicons::bs_icon("gear-fill"),
         # We explicitly call the onboarding setup UI module right here inside app_ui!
         mod_setup_ui("setup_panel")
@@ -65,15 +69,31 @@ app_ui <- function(request) {
       # Tab B: Functional Data Dashboard (Conditionally unlocked/shown by server)
       bslib::nav_panel(
         title = "New Entry",
+        value = "new_entry_tab",
         icon = bsicons::bs_icon("table"),
-        shiny::uiOutput("conditional_dashboard_ui")
+        mod_data_entry_ui("data_entry_panel")
       ),
 
       # Tab C: Inventory Dashboard (Conditionally unlocked/shown by server)
       bslib::nav_panel(
         title = "Transaction Log Dashboard",
+        value = "transaction_log_tab",
         icon = bsicons::bs_icon("boxes"),
-        shiny::uiOutput("conditional_inventory_ui")
+        mod_transaction_log_ui("inventory_panel")
+      ),
+      # Tab D: Passport Explorer
+      bslib::nav_panel(
+        title = "Passport Explorer",
+        value = "passport_explorer_tab",
+        icon = bsicons::bs_icon("person-vcard-fill"),
+        mod_passport_explorer_ui("passport_explorer")
+      ),
+      # Tab E: Species Explorer
+      bslib::nav_panel(
+        title = "Species Explorer",
+        value = "species_explorer_tab",
+        icon = bsicons::bs_icon("diagram-3-fill"),
+        mod_species_explorer_ui("species_explorer")
       )
     )
   )

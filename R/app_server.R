@@ -3,6 +3,7 @@
 #' @param input,output,session Internal parameters for {shiny}.
 #'     DO NOT REMOVE.
 #' @import shiny
+#' @importFrom bslib nav_hide nav_show
 #' @noRd
 app_server <- function(input, output, session) {
   # Initialize a reactive value for the database path.
@@ -29,9 +30,6 @@ app_server <- function(input, output, session) {
         )
       )
     } else {
-      # When a valid database path is set, save it for future sessions.
-      save_db_config(db_state$path)
-
       div(
         class = "card border-success-subtle bg-white shadow-sm",
         div(
@@ -48,55 +46,61 @@ app_server <- function(input, output, session) {
   })
 
   shiny::observe({
-    # If a database is connected, switch to the inventory view.
-    if (!is.null(db_state$path)) {
-      bslib::nav_select("main_tabs", selected = "Transaction Log Dashboard")
-    } else {
-      # Otherwise, ensure the user is on the setup page.
-      bslib::nav_select("main_tabs", selected = "Database Connection")
-    }
-  })
+    # This observer controls which tabs are visible based on DB connection state.
+    is_connected <- !is.null(db_state$path) && db_state$path != ""
 
-  output$conditional_dashboard_ui <- shiny::renderUI({
-    if (is.null(db_state$path)) {
-      div(
-        class = "p-5 text-center text-muted",
-        bsicons::bs_icon(
-          "lock-fill",
-          size = "3rem",
-          class = "text-warning mb-3"
-        ),
-        shiny::h4("Ledger Locked"),
-        shiny::p(
-          "Please mount or initialize an SQLite database file in the first tab to view records."
-        )
-      )
+    if (is_connected) {
+      # DB is connected: Hide setup, show data tabs.
+      # When a valid database path is set, save it for future sessions.
+      save_db_config(db_state$path)
+
+      bslib::nav_hide(id = "main_tabs", target = "db_connection_tab", session = session)
+      bslib::nav_show(id = "main_tabs", target = "new_entry_tab", session = session)
+      bslib::nav_show(id = "main_tabs", target = "transaction_log_tab", session = session)
+      bslib::nav_show(id = "main_tabs", target = "passport_explorer_tab", session = session)
+      bslib::nav_show(id = "main_tabs", target = "species_explorer_tab", session = session)
+
+      # Select a default data tab to show the user.
+      bslib::nav_select("main_tabs", selected = "new_entry_tab", session = session)
     } else {
-      # Show the inventory UI only when the database is available.
-      mod_data_entry_ui("data_entry_panel")
+      # DB is disconnected: Show setup, hide data tabs.
+      bslib::nav_show(id = "main_tabs", target = "db_connection_tab", session = session)
+      bslib::nav_hide(id = "main_tabs", target = "new_entry_tab", session = session)
+      bslib::nav_hide(id = "main_tabs", target = "transaction_log_tab", session = session)
+      bslib::nav_hide(id = "main_tabs", target = "passport_explorer_tab", session = session)
+      bslib::nav_hide(id = "main_tabs", target = "species_explorer_tab", session = session)
+
+      # Ensure the connection tab is selected.
+      bslib::nav_select("main_tabs", selected = "db_connection_tab", session = session)
     }
-  })
+  }, label = "Tab Visibility Controller")
 
   # Initialize the server logic for the inventory ledger module.
   mod_transaction_log_server("inventory_panel", db_state)
-  output$conditional_inventory_ui <- shiny::renderUI({
-    if (is.null(db_state$path)) {
-      div(
-        class = "p-5 text-center text-muted",
-        bsicons::bs_icon(
-          "lock-fill",
-          size = "3rem",
-          class = "text-warning mb-3"
-        ),
-        shiny::h4("Vault Locked"),
-        shiny::p(
-          "Please mount or initialize an SQLite database file in the first tab to access the inventory dashboard."
-        )
-      )
-    } else {
-      # Show the inventory UI only when the database is available.
-      mod_transaction_log_ui("inventory_panel")
-    }
+
+  # Initialize the server logic for the passport explorer module.
+  mod_passport_explorer_server("passport_explorer", db_state)
+
+  # Initialize the server logic for the species explorer module.
+  mod_species_explorer_server("species_explorer", db_state)
+
+  # Render the disconnect button conditionally in the sidebar
+  output$disconnect_button_ui <- renderUI({
+    # Only show the button if a database path is set
+    req(db_state$path)
+
+    shiny::actionButton(
+      "disconnect_btn",
+      "Disconnect Session",
+      icon = bsicons::bs_icon("power"),
+      class = "btn-danger w-100 mt-3" # Added margin-top for spacing
+    )
   })
 
+  # Observer to handle the disconnect button click
+  observeEvent(input$disconnect_btn, {
+    # Call the centralized utility function to handle the disconnect logic.
+    disconnect_db_session(db_state, session)
+  })
+  
 }

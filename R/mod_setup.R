@@ -6,13 +6,13 @@
 #' @importFrom shinyWidgets show_alert
 #' @noRd
 mod_setup_ui <- function(id) {
-  ns <- shiny::NS(id)
+  ns <- NS(id)
 
-  shiny::fluidPage(
+  fluidPage(
     # Modern full-viewport container centered using Bootstrap 5 Flex utilities
     style = "background: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%); min-height: 90vh; display: flex; align-items: center; justify-content: center;",
 
-    shiny::div(
+    div(
       style = "width: 100%; max-width: 950px; padding: 20px;",
       bslib::card(
         class = "shadow-lg border-0",
@@ -22,7 +22,7 @@ mod_setup_ui <- function(id) {
         bslib::card_header(
           class = "text-white text-center py-4 border-0",
           style = "background: linear-gradient(90deg, #042F2E 0%, #0F766E 100%);",
-          shiny::h4(
+          h4(
             class = "mb-1 fw-bold",
             style = "font-family: 'Outfit', sans-serif;",
             "Connect an existing breeding repository or initialize a fresh seed database session."
@@ -49,12 +49,12 @@ mod_setup_ui <- function(id) {
                     class = "mb-3",
                     style = "color: #0284C7;"
                   ),
-                  shiny::h4(
+                  h4(
                     class = "fw-bold mb-2",
                     style = "color: #1E293B;",
                     "Link Existing Storage"
                   ),
-                  shiny::p(
+                  p(
                     class = "small mb-4",
                     style = "color: #64748B;",
                     "Mount an active historical breeding record registry database file (.sqlite / .db)."
@@ -86,12 +86,12 @@ mod_setup_ui <- function(id) {
                     class = "mb-3",
                     style = "color: #059669;"
                   ),
-                  shiny::h4(
+                  h4(
                     class = "fw-bold mb-2",
                     style = "color: #1E293B;",
                     "Create Clean Database"
                   ),
-                  shiny::p(
+                  p(
                     class = "small mb-3",
                     style = "color: #64748B;",
                     "Establish a fresh working sector workspace root target folder configuration."
@@ -105,7 +105,7 @@ mod_setup_ui <- function(id) {
                     title = "Select working path cluster container",
                     class = "btn btn-outline-secondary fw-bold w-100 mb-3 rounded-pill"
                   ),
-                  shiny::actionButton(
+                  actionButton(
                     ns("create_btn"),
                     label = "Initialize Schema Architecture",
                     class = "btn btn-success fw-bold w-100 mt-2 rounded-pill"
@@ -128,7 +128,7 @@ mod_setup_ui <- function(id) {
 #'   holds the application's global state, including the database path.
 #' @noRd
 mod_setup_server <- function(id, db_state) {
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     # Define robust, cross-platform volumes for shinyFiles navigation
@@ -158,7 +158,7 @@ mod_setup_server <- function(id, db_state) {
 
     # Reactive expression to parse the selected file path.
     # This logic handles cases where no file is selected or the dialog is cancelled.
-    selected_file_path <- shiny::reactive({
+    selected_file_path <- reactive({
       if (is.integer(input$file_btn) || is.null(input$file_btn)) return(NULL)
       parsed <- shinyFiles::parseFilePaths(volumes, input$file_btn)$datapath
       if (length(parsed) == 0 || parsed == "") return(NULL)
@@ -166,7 +166,7 @@ mod_setup_server <- function(id, db_state) {
     })
 
     # Reactive expression to parse the selected directory path.
-    selected_dir_path <- shiny::reactive({
+    selected_dir_path <- reactive({
       if (is.integer(input$dir_btn) || is.null(input$dir_btn)) return(NULL)
       parsed <- shinyFiles::parseDirPath(volumes, input$dir_btn)
       if (length(parsed) == 0 || parsed == "") return(NULL)
@@ -174,9 +174,9 @@ mod_setup_server <- function(id, db_state) {
     })
 
     # Observer for handling an existing database file selection.
-    shiny::observeEvent(selected_file_path(), {
+    observeEvent(selected_file_path(), {
       path <- selected_file_path()
-      shiny::req(path)
+      req(path)
 
       if (file.exists(path)) {
         # Before connecting, perform a sanity check on the file.
@@ -198,7 +198,7 @@ mod_setup_server <- function(id, db_state) {
     })
 
     # Observer for handling the creation of a new database.
-    shiny::observeEvent(input$create_btn, {
+    observeEvent(input$create_btn, {
       dir_path <- selected_dir_path()
       if (is.null(dir_path)) {
         shinyWidgets::show_alert("Warning", "A root directory must be selected first.", type = "warning")
