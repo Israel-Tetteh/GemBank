@@ -12,7 +12,7 @@ get_field_book(
 }
 \arguments{
 \item{db_path}{A character string specifying the path to the SQLite file.
-Defaults to `"data/breeding_db.sqlite"`.}
+Defaults to \code{"data/breeding_db.sqlite"}.}
 
 \item{trial_name}{(Optional) Name of the specific trial to extract.}
 
@@ -20,8 +20,8 @@ Defaults to `"data/breeding_db.sqlite"`.}
 }
 \value{
 A named list of data frames. Each data frame represents the wide-format
-  field book for a specific trial, perfectly mimicking an Excel workbook with
-  multiple sheets.
+field book for a specific trial, perfectly mimicking an Excel workbook with
+multiple sheets.
 }
 \description{
 Extracts raw, plot-level field data. This function is flexible: it can be

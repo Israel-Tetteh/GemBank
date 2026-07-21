@@ -37,7 +37,7 @@ add_inventory_deposit(
 \item{reason}{Details regarding the deposit (e.g., "2026 Harvest").}
 }
 \value{
-Invisibly returns `TRUE` on success.
+Invisibly returns \code{TRUE} on success.
 }
 \description{
 Adds seeds to the inventory using the accession name. Updates existing stock

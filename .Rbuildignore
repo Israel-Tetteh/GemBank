@@ -1,7 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^data-raw$
-dev_history.R
+^CODE_OF_CONDUCT\.md$
+^fix_namespaces\.R$
+^data$
 ^dev$
-$run_dev.*
-^.here$
+^\.here$

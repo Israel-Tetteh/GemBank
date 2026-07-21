@@ -15,7 +15,7 @@ withdraw_seed(
 }
 \arguments{
 \item{db_path}{A character string specifying the path to the SQLite file.
-Defaults to `"data/breeding_db.sqlite"`.}
+Defaults to \code{"data/breeding_db.sqlite"}.}
 
 \item{withdraw_amount}{Numeric quantity of seeds to remove.}
 
@@ -30,7 +30,7 @@ Defaults to `"data/breeding_db.sqlite"`.}
 \item{storage_location}{Identifier for the freezer or cold room from which to withdraw.}
 }
 \value{
-Invisibly returns `TRUE` on success, or throws an error on failure.
+Invisibly returns \code{TRUE} on success, or throws an error on failure.
 }
 \description{
 Removes a specified amount of seeds from the inventory using the human-readable

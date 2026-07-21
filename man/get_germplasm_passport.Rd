@@ -8,7 +8,7 @@ get_germplasm_passport(db_path = "data/breeding_db.sqlite", target_accession)
 }
 \arguments{
 \item{db_path}{A character string specifying the path to the SQLite file.
-Defaults to `"data/breeding_db.sqlite"`.}
+Defaults to \code{"data/breeding_db.sqlite"}.}
 
 \item{target_accession}{The specific accession name to profile.}
 }

@@ -12,16 +12,16 @@ get_trial_data(
 }
 \arguments{
 \item{db_path}{A character string specifying the path to the SQLite file.
-Defaults to `"data/breeding_db.sqlite"`.}
+Defaults to \code{"data/breeding_db.sqlite"}.}
 
 \item{target_trial_name}{The human-readable name of the trial to extract.}
 
-\item{wide_format}{Logical. If `TRUE` (default), pivots the observations so
-each trait is its own column. If `FALSE`, returns the raw long format.}
+\item{wide_format}{Logical. If \code{TRUE} (default), pivots the observations so
+each trait is its own column. If \code{FALSE}, returns the raw long format.}
 }
 \value{
-A named list containing `trial_info` (unpacked metadata) and
-  `observations` (the data frame of field measurements).
+A named list containing \code{trial_info} (unpacked metadata) and
+\code{observations} (the data frame of field measurements).
 }
 \description{
 Extracts an entire experiment's data. Unpacks custom JSON trial metadata

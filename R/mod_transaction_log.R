@@ -146,7 +146,7 @@ mod_transaction_log_ui <- function(id) {
               textInput(
                 ns("reg_storage_condition"),
                 "Storage Condition",
-                placeholder = "e.g., 4°C, -20°C"
+                placeholder = "e.g., 4 C, -20 C"
               )
             ),
             h6("Dates & Remarks", class = "text-primary fw-bold mt-4"),
@@ -333,6 +333,7 @@ mod_transaction_log_ui <- function(id) {
 #' @param id Module id
 #' @param db_state A `reactiveValues` object from `app_server` holding the database path.
 #' @param global_refresh_trigger A reactiveVal to signal data changes.
+#' @importFrom stats setNames
 #' @noRd
 mod_transaction_log_server <- function(id, db_state, global_refresh_trigger) {
   moduleServer(id, function(input, output, session) {

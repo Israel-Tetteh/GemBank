@@ -28,7 +28,7 @@ add_observation(
 \item{user_name}{Name of the researcher entering the data.}
 }
 \value{
-Invisibly returns `TRUE` on success.
+Invisibly returns \code{TRUE} on success.
 }
 \description{
 Records a phenotypic measurement using human-readable plot numbers and trait names.

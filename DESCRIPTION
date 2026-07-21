@@ -1,7 +1,7 @@
 Package: GemBank
 Title: A Modern Seed Bank and Breeding Program Management System
 Version: 0.1.0
-Authors@R: 
+Authors@R: c(
     person(given = "Israel",
            family = "Tetteh",
            role = c("aut", "cre"),
@@ -10,12 +10,12 @@ Authors@R:
            family = "Ayiku-Martey",
            role = "ctb",
            email = "kingcophy9@gmail.com")
+    )
 Description: A comprehensive Shiny application designed to manage the entire lifecycle of a breeding program's genetic resources. It provides tools for data entry, inventory management, trial creation, and powerful querying, all backed by a robust SQLite database with a full audit trail. Built with the {golem} framework for robustness and easy deployment.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
-Imports: 
+Imports:
     shiny,
     golem,
     bslib,
@@ -27,6 +27,8 @@ Imports:
     dplyr,
     jsonlite,
     stats,
-    shinyFiles
-URL: https://github.com/your-github-username/GemBank
-BugReports: https://github.com/your-github-username/GemBank/issues
+    shinyFiles,
+    config
+URL: https://github.com/Israel-Tetteh/GemBank
+BugReports: https://github.com/Israel-Tetteh/GemBank/issues
+Config/roxygen2/version: 8.0.0

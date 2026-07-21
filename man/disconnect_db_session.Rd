@@ -7,8 +7,8 @@
 disconnect_db_session(db_state, session)
 }
 \arguments{
-\item{db_state}{A `reactiveValues` object holding the application's global state,
-including `db_state$path`.}
+\item{db_state}{A \code{reactiveValues} object holding the application's global state,
+including \code{db_state$path}.}
 
 \item{session}{The Shiny session object, used for UI manipulations like
 switching tabs and showing alerts.}

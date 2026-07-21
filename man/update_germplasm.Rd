@@ -16,7 +16,7 @@ update_germplasm(db_path, accession_name, updates, user_name)
 \item{user_name}{The name of the user making the change.}
 }
 \value{
-Invisibly returns `TRUE` on success.
+Invisibly returns \code{TRUE} on success.
 }
 \description{
 Updates the details of an existing germplasm record and logs the change.

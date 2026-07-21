@@ -43,7 +43,7 @@ app_ui <- function(request) {
       shiny::hr(),
       div(
         style = "font-size: 0.8rem; color: #6c757d;",
-        "Operator: Israel Tetteh"
+        "Owner: CARNASA-KNUST"
       ),
       div(
         style = "font-size: 0.8rem; color: #6c757d;",

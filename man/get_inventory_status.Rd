@@ -11,14 +11,14 @@ get_inventory_status(
 }
 \arguments{
 \item{db_path}{A character string specifying the path to the SQLite file.
-Defaults to `"data/breeding_db.sqlite"`.}
+Defaults to \code{"data/breeding_db.sqlite"}.}
 
 \item{target_accession}{(Optional) A specific accession name to search for
-(e.g., "SC-2026-001"). If `NULL`, returns the entire seed inventory.}
+(e.g., "SC-2026-001"). If \code{NULL}, returns the entire seed inventory.}
 }
 \value{
 A data frame containing the accession name, species, quantity, unit,
-  and storage location.
+and storage location.
 }
 \description{
 Retrieves the current physical stock levels for all germplasm in the database,

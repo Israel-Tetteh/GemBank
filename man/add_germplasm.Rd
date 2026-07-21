@@ -26,7 +26,7 @@ add_germplasm(
 }
 \arguments{
 \item{db_path}{A character string specifying the path to the SQLite file.
-Defaults to `"data/breeding_db.sqlite"`.}
+Defaults to \code{"data/breeding_db.sqlite"}.}
 
 \item{accession_name}{Unique identifier for the seed line.}
 
@@ -35,7 +35,7 @@ Defaults to `"data/breeding_db.sqlite"`.}
 \item{pedigree}{Genetic background or cross.}
 }
 \value{
-Invisibly returns `TRUE` on success, or throws an error on failure.
+Invisibly returns \code{TRUE} on success, or throws an error on failure.
 }
 \description{
 Registers a new seed line, variety, or genetic material (germplasm) into the

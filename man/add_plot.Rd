@@ -29,7 +29,7 @@ add_plot(
 \item{block}{Replicate or block number within the experimental design.}
 }
 \value{
-Invisibly returns `TRUE` on success.
+Invisibly returns \code{TRUE} on success.
 }
 \description{
 Assigns a specific germplasm to a trial by creating a plot record.

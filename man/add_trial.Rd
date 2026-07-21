@@ -29,7 +29,7 @@ add_trial(
 }
 \arguments{
 \item{db_path}{A character string specifying the path to the SQLite file.
-Defaults to `"data/breeding_db.sqlite"`.}
+Defaults to \code{"data/breeding_db.sqlite"}.}
 
 \item{trial_name}{Name of the experiment or trial.}
 
@@ -41,7 +41,7 @@ Defaults to `"data/breeding_db.sqlite"`.}
 design, irrigation type). Defaults to an empty list.}
 }
 \value{
-Invisibly returns `TRUE` on success, or throws an error on failure.
+Invisibly returns \code{TRUE} on success, or throws an error on failure.
 }
 \description{
 Creates a new field or greenhouse trial record in the database. Flexible metadata

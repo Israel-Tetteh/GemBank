@@ -16,14 +16,14 @@ add_trait(
 }
 \arguments{
 \item{db_path}{A character string specifying the path to the SQLite file.
-Defaults to `"data/breeding_db.sqlite"`.}
+Defaults to \code{"data/breeding_db.sqlite"}.}
 
 \item{trait_name}{Name of the metric or trait being measured (e.g., "Aphid_Damage_Score").}
 
 \item{unit}{Unit of measurement (e.g., "cm", "kg/ha", "1-5 Scale").}
 }
 \value{
-Invisibly returns `TRUE` on success, or throws an error on failure.
+Invisibly returns \code{TRUE} on success, or throws an error on failure.
 }
 \description{
 Defines a new phenotypic trait and its associated unit of measurement in the
