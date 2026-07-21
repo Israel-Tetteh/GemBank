@@ -7,9 +7,24 @@
 add_trial(
   db_path = "data/breeding_db.sqlite",
   trial_name,
-  trial_loc,
-  start_date,
-  metadata_list = list()
+  location,
+  trial_code = NULL,
+  trial_type = NULL,
+  objective = NULL,
+  latitude = NULL,
+  longitude = NULL,
+  season = NULL,
+  year = NULL,
+  experimental_design = NULL,
+  number_of_replications = NULL,
+  principal_investigator = NULL,
+  project_name = NULL,
+  planting_date = NULL,
+  expected_harvest_date = NULL,
+  actual_harvest_date = NULL,
+  trial_status = "Planned",
+  remarks = NULL,
+  user_name = "Unknown"
 )
 }
 \arguments{

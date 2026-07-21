@@ -7,10 +7,20 @@
 add_inventory_deposit(
   db_path = "data/breeding_db.sqlite",
   accession_name,
-  amount_grams,
+  quantity,
+  unit = "g",
   storage_location,
   user_name,
-  reason
+  container = NULL,
+  source_type = NULL,
+  source_reference = NULL,
+  deposit_reason = NULL,
+  seed_status = "Available",
+  viability_percent = NULL,
+  moisture_percent = NULL,
+  storage_condition = NULL,
+  deposit_date = Sys.Date(),
+  remarks = NULL
 )
 }
 \arguments{
@@ -18,11 +28,11 @@ add_inventory_deposit(
 
 \item{accession_name}{The unique identifier of the seed line.}
 
-\item{amount_grams}{Quantity of seeds to add, strictly in grams.}
-
 \item{storage_location}{Identifier for the freezer or cold room.}
 
 \item{user_name}{Name of the researcher making the deposit.}
+
+\item{amount_grams}{Quantity of seeds to add, strictly in grams.}
 
 \item{reason}{Details regarding the deposit (e.g., "2026 Harvest").}
 }

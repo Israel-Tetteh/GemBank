@@ -76,7 +76,7 @@ app_ui <- function(request) {
 
       # Tab C: Inventory Dashboard (Conditionally unlocked/shown by server)
       bslib::nav_panel(
-        title = "Transaction Log Dashboard",
+        title = "Inventory Management",
         value = "transaction_log_tab",
         icon = bsicons::bs_icon("boxes"),
         mod_transaction_log_ui("inventory_panel")
@@ -94,6 +94,30 @@ app_ui <- function(request) {
         value = "species_explorer_tab",
         icon = bsicons::bs_icon("diagram-3-fill"),
         mod_species_explorer_ui("species_explorer")
+      ),
+      # Tab F: Germplasm Query Builder
+      bslib::nav_menu(
+        title = "Query Database",
+        icon = bsicons::bs_icon("funnel-fill"),
+        bslib::nav_panel(
+          title = "Germplasm Query",
+          value = "germplasm_query_panel",
+          mod_germplasm_query_ui("germplasm_query_1")
+        ),
+        bslib::nav_panel(
+          title = "Inventory Query",
+          value = "inventory_query_panel",
+          mod_inventory_query_ui("inventory_query_1")
+        ),
+        bslib::nav_panel(
+          title = "Trial Query",
+          value = "trial_query_panel",
+          mod_trial_query_ui("trial_query_1")
+        ),
+        bslib::nav_panel(
+          title = "Plot Query",
+          mod_plot_query_ui("plot_query_1")
+        )
       )
     )
   )

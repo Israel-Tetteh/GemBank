@@ -4,16 +4,14 @@
 \alias{update_germplasm}
 \title{Update Germplasm Details}
 \usage{
-update_germplasm(db_path, accession_name, new_pedigree, new_species, user_name)
+update_germplasm(db_path, accession_name, updates, user_name)
 }
 \arguments{
 \item{db_path}{Path to the SQLite file.}
 
 \item{accession_name}{The unique identifier of the seed line to update.}
 
-\item{new_pedigree}{The new pedigree value.}
-
-\item{new_species}{The new species value.}
+\item{updates}{A named list of columns and their new values to update.}
 
 \item{user_name}{The name of the user making the change.}
 }

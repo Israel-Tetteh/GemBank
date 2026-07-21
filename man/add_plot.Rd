@@ -9,7 +9,12 @@ add_plot(
   trial_name,
   accession_name,
   plot_number,
-  block
+  replication = NULL,
+  block = NULL,
+  row = NULL,
+  column = NULL,
+  remarks = NULL,
+  user_name = "Unknown"
 )
 }
 \arguments{

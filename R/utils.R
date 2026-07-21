@@ -46,92 +46,229 @@ init_db <- function(db_path = "data/breeding_db.sqlite") {
     DBI::dbExecute(
       con,
       "CREATE TABLE IF NOT EXISTS germplasm (
-      germplasm_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      accession_name TEXT NOT NULL UNIQUE,
-      pedigree TEXT,
-      species TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );"
+        germplasm_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        accession_name TEXT NOT NULL UNIQUE,
+        preferred_name TEXT,
+        species TEXT NOT NULL,
+        pedigree TEXT,
+        biological_status TEXT DEFAULT 'Unknown',
+        accession_type TEXT,
+        seed_source TEXT,
+        source_name TEXT,
+        country_of_origin TEXT,
+        collection_site TEXT,
+        collector_name TEXT,
+        acquisition_date DATE,
+        generation TEXT,
+        status TEXT DEFAULT 'Available',
+        remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME
+      );"
+    )
+
+    # Trigger to auto-update the 'updated_at' timestamp
+    DBI::dbExecute(con, "
+      CREATE TRIGGER IF NOT EXISTS germplasm_updated_at
+      AFTER UPDATE ON germplasm
+      FOR EACH ROW
+      BEGIN
+          UPDATE germplasm SET updated_at = CURRENT_TIMESTAMP WHERE germplasm_id = OLD.germplasm_id;
+      END;"
     )
 
     # Trials table
     DBI::dbExecute(
       con,
       "CREATE TABLE IF NOT EXISTS trials (
-      trial_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trial_name TEXT NOT NULL UNIQUE,
-      trial_loc TEXT NOT NULL,
-      start_date DATE,
-      metadata TEXT
-    );"
+        trial_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trial_name TEXT NOT NULL UNIQUE,
+        trial_code TEXT UNIQUE,
+        trial_type TEXT,
+        objective TEXT,
+        location TEXT NOT NULL,
+        latitude REAL,
+        longitude REAL,
+        season TEXT,
+        year INTEGER,
+        experimental_design TEXT,
+        number_of_replications INTEGER CHECK(number_of_replications > 0),
+        principal_investigator TEXT,
+        project_name TEXT,
+        planting_date DATE,
+        expected_harvest_date DATE,
+        actual_harvest_date DATE,
+        trial_status TEXT DEFAULT 'Planned',
+        remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME
+      );"
     )
+
+    # Trigger for trials updated_at
+    DBI::dbExecute(con, "
+      CREATE TRIGGER IF NOT EXISTS trials_updated_at
+      AFTER UPDATE ON trials
+      FOR EACH ROW
+      BEGIN
+          UPDATE trials SET updated_at = CURRENT_TIMESTAMP WHERE trial_id = OLD.trial_id;
+      END;")
 
     # Plots table
     DBI::dbExecute(
       con,
       "CREATE TABLE IF NOT EXISTS plots (
-      plot_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trial_id INTEGER,
-      germplasm_id INTEGER,
-      plot_number INTEGER,
-      block INTEGER,
-      FOREIGN KEY (trial_id) REFERENCES trials(trial_id),
-      FOREIGN KEY (germplasm_id) REFERENCES germplasm(germplasm_id),
-      UNIQUE (trial_id, plot_number)
-    );"
+        plot_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trial_id INTEGER,
+        germplasm_id INTEGER,
+        plot_number INTEGER,
+        replication INTEGER,
+        block INTEGER,
+        `row` INTEGER,
+        `column` INTEGER,
+        remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME,
+        FOREIGN KEY (trial_id) REFERENCES trials(trial_id),
+        FOREIGN KEY (germplasm_id) REFERENCES germplasm(germplasm_id),
+        UNIQUE (trial_id, plot_number)
+      );"
     )
 
+    # Trigger for plots updated_at
+    DBI::dbExecute(con, "
+      CREATE TRIGGER IF NOT EXISTS plots_updated_at
+      AFTER UPDATE ON plots
+      FOR EACH ROW
+      BEGIN
+          UPDATE plots SET updated_at = CURRENT_TIMESTAMP WHERE plot_id = OLD.plot_id;
+      END;")
+      
     # Traits table
     DBI::dbExecute(
       con,
       "CREATE TABLE IF NOT EXISTS traits (
-      trait_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trait_name TEXT NOT NULL UNIQUE,
-      unit TEXT
-    );"
+        trait_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trait_name TEXT NOT NULL UNIQUE,
+        trait_description TEXT,
+        unit TEXT,
+        data_type TEXT,
+        remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME
+      );"
     )
+
+    # Trigger for traits updated_at
+    DBI::dbExecute(con, "
+      CREATE TRIGGER IF NOT EXISTS traits_updated_at
+      AFTER UPDATE ON traits
+      FOR EACH ROW
+      BEGIN
+          UPDATE traits SET updated_at = CURRENT_TIMESTAMP WHERE trait_id = OLD.trait_id;
+      END;")
 
     # Observations table
     DBI::dbExecute(
       con,
       "CREATE TABLE IF NOT EXISTS observations (
-      observation_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      plot_id INTEGER,
-      trait_id INTEGER,
-      value REAL,
-      obs_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (plot_id) REFERENCES plots(plot_id),
-      FOREIGN KEY (trait_id) REFERENCES traits(trait_id),
-      UNIQUE (plot_id, trait_id)
-    );"
+        observation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plot_id INTEGER,
+        trait_id INTEGER,
+        observation_value TEXT,
+        remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME,
+        FOREIGN KEY (plot_id) REFERENCES plots(plot_id),
+        FOREIGN KEY (trait_id) REFERENCES traits(trait_id),
+        UNIQUE (plot_id, trait_id)
+      );"
     )
+
+    # Trigger for observations updated_at
+    DBI::dbExecute(con, "
+      CREATE TRIGGER IF NOT EXISTS observations_updated_at
+      AFTER UPDATE ON observations
+      FOR EACH ROW
+      BEGIN
+          UPDATE observations SET updated_at = CURRENT_TIMESTAMP WHERE observation_id = OLD.observation_id;
+      END;")
 
     # Inventory table
     DBI::dbExecute(
       con,
       "CREATE TABLE IF NOT EXISTS inventory (
-      inventory_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      germplasm_id INTEGER,
-      quantity REAL,
-      unit TEXT,
-      storage_location TEXT,
-      FOREIGN KEY (germplasm_id) REFERENCES germplasm(germplasm_id),
-      UNIQUE (germplasm_id, storage_location)
-    );"
+        inventory_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        germplasm_id INTEGER NOT NULL,
+        quantity REAL NOT NULL CHECK(quantity >= 0),
+        unit TEXT DEFAULT 'g',
+        storage_location TEXT NOT NULL,
+        container TEXT,
+        source_type TEXT,
+        source_reference TEXT,
+        deposit_reason TEXT,
+        seed_status TEXT DEFAULT 'Available',
+        viability_percent REAL CHECK(viability_percent >= 0 AND viability_percent <= 100),
+        moisture_percent REAL,
+        storage_condition TEXT,
+        deposit_date DATE DEFAULT (date('now')),
+        last_inventory_check DATE,
+        remarks TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME,
+        FOREIGN KEY (germplasm_id) REFERENCES germplasm(germplasm_id)
+      );"
     )
 
-    # Transaction log table
+    # Trigger for inventory updated_at
+    DBI::dbExecute(con, "
+      CREATE TRIGGER IF NOT EXISTS inventory_updated_at
+      AFTER UPDATE ON inventory
+      FOR EACH ROW
+      BEGIN
+          UPDATE inventory SET updated_at = CURRENT_TIMESTAMP WHERE inventory_id = OLD.inventory_id;
+      END;")
+
+    # Indexes for inventory
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_inventory_germplasm_id ON inventory(germplasm_id);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_inventory_storage_location ON inventory(storage_location);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_inventory_seed_status ON inventory(seed_status);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_inventory_source_type ON inventory(source_type);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_inventory_deposit_date ON inventory(deposit_date);")
+
+    # Audit Log table
     DBI::dbExecute(
       con,
-      "CREATE TABLE IF NOT EXISTS transaction_log (
-      log_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      table_name TEXT,
-      action_type TEXT,
-      user_name TEXT,
-      details TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    );"
+      "CREATE TABLE IF NOT EXISTS audit_log (
+        audit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        table_name TEXT NOT NULL,
+        record_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        user_name TEXT,
+        details TEXT,
+        action_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      );"
     )
+
+    # Indexes for Audit Log
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_audit_log_table_name ON audit_log(table_name);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_audit_log_action_timestamp ON audit_log(action_timestamp);")
+
+
+    # Add indexes for performance
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_germplasm_accession_name ON germplasm(accession_name);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_germplasm_species ON germplasm(species);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_germplasm_biological_status ON germplasm(biological_status);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_germplasm_accession_type ON germplasm(accession_type);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_germplasm_status ON germplasm(status);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_trials_trial_name ON trials(trial_name);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_trials_trial_code ON trials(trial_code);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_trials_location ON trials(location);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_trials_year ON trials(year);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_trials_season ON trials(season);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_trials_trial_type ON trials(trial_type);")
+    DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_trials_trial_status ON trials(trial_status);")
   })
 
   message("Database initialized successfully at: ", db_path)
@@ -172,7 +309,7 @@ clear_db <- function(db_path = "data/breeding_db.sqlite") {
     DBI::dbExecute(con, "DELETE FROM traits;")
     DBI::dbExecute(con, "DELETE FROM trials;")
     DBI::dbExecute(con, "DELETE FROM germplasm;")
-    DBI::dbExecute(con, "DELETE FROM transaction_log;")
+    DBI::dbExecute(con, "DELETE FROM audit_log;")
 
     # Reset AUTOINCREMENT
     DBI::dbExecute(con, "DELETE FROM sqlite_sequence;")
@@ -213,37 +350,82 @@ clear_db <- function(db_path = "data/breeding_db.sqlite") {
 #' )
 #' }
 add_germplasm <- function(
-  db_path = "data/breeding_db.sqlite",
-  accession_name,
-  pedigree,
-  species
+    db_path = "data/breeding_db.sqlite",
+    accession_name,
+    species,
+    preferred_name = NULL,
+    pedigree = NULL,
+    biological_status = 'Unknown',
+    accession_type = NULL,
+    seed_source = NULL,
+    source_name = NULL,
+    country_of_origin = NULL,
+    collection_site = NULL,
+    collector_name = NULL,
+    acquisition_date = NULL,
+    generation = NULL,
+    status = 'Available',
+    remarks = NULL,
+    user_name = "Unknown"
 ) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
 
-  query <- "INSERT INTO germplasm (accession_name, pedigree, species) VALUES (?, ?, ?)"
+  # Helper to clean strings, returning NULL if input is empty/NULL
+  clean_text <- function(text, case = "lower") {
+    if (is.null(text) || trimws(text) == "") return(NULL)
+    if (case == "upper") {
+      return(toupper(trimws(text)))
+    }
+    tolower(trimws(text))
+  }
 
-  tryCatch(
-    {
+  query <- "INSERT INTO germplasm (
+              accession_name, preferred_name, species, pedigree, biological_status,
+              accession_type, seed_source, source_name, country_of_origin,
+              collection_site, collector_name, acquisition_date, generation,
+              status, remarks
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+
+  params <- list(
+    clean_text(accession_name, case = "upper"),
+    clean_text(preferred_name),
+    clean_text(species),
+    clean_text(pedigree),
+    clean_text(biological_status),
+    clean_text(accession_type),
+    clean_text(seed_source),
+    clean_text(source_name),
+    clean_text(country_of_origin),
+    clean_text(collection_site),
+    clean_text(collector_name),
+    if (is.null(acquisition_date) || acquisition_date == "") NULL else as.character(acquisition_date),
+    clean_text(generation),
+    clean_text(status),
+    clean_text(remarks)
+  )
+
+  tryCatch({
+      DBI::dbExecute(con, query, params = params)
+      
+      # Log action
+      record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
+      details <- sprintf("Created new germplasm: %s", clean_text(accession_name, case = "upper"))
       DBI::dbExecute(
         con,
-        query,
-        params = list(
-          tolower(trimws(accession_name)),
-          tolower(trimws(pedigree)),
-          tolower(trimws(species))
-        )
+        "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
+        params = list("germplasm", record_id, "INSERT", clean_text(user_name), details)
       )
+
       message(sprintf("Successfully added germplasm: '%s'", accession_name))
       invisible(TRUE)
-    },
-    error = function(e) {
-      stop(
-        "Failed to add germplasm. Ensure accession_name is unique. Error: ",
-        e$message
-      )
-    }
-  )
+    }, error = function(e) {
+      if (grepl("UNIQUE constraint failed: germplasm.accession_name", e$message, ignore.case = TRUE)) {
+        stop("Failed to add germplasm. The accession name is already in use.")
+      } else {
+        stop("Failed to add germplasm. Error: ", e$message)
+      }
+    })
 }
 
 
@@ -271,28 +453,49 @@ add_germplasm <- function(
 #'   unit = "kg/ha"
 #' ))
 #' }
-add_trait <- function(db_path = "data/breeding_db.sqlite", trait_name, unit) {
+add_trait <- function(db_path = "data/breeding_db.sqlite",
+                      trait_name,
+                      trait_description = NULL,
+                      unit = NULL,
+                      data_type = NULL,
+                      remarks = NULL,
+                      user_name = "Unknown") {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
 
-  query <- "INSERT INTO traits (trait_name, unit) VALUES (?, ?)"
-  tryCatch(
-    {
-      DBI::dbExecute(
-        con,
-        query,
-        params = list(tolower(trimws(trait_name)), tolower(trimws(unit)))
-      )
-      message(sprintf("Successfully added trait: '%s'", trait_name))
-      invisible(TRUE)
-    },
-    error = function(e) {
-      stop(
-        "Failed to add trait. Ensure trait_name is unique. Error: ",
-        e$message
-      )
-    }
+  # Helper to clean text inputs
+  clean_text <- function(text) {
+    if (is.null(text) || trimws(text) == "") return(NULL)
+    trimws(text)
+  }
+
+  query <- "INSERT INTO traits (trait_name, trait_description, unit, data_type, remarks) VALUES (?, ?, ?, ?, ?)"
+  
+  params <- list(
+    tolower(clean_text(trait_name)),
+    clean_text(trait_description),
+    clean_text(unit),
+    clean_text(data_type),
+    clean_text(remarks)
   )
+
+  tryCatch({
+    DBI::dbExecute(con, query, params = params)
+    
+    # Log action
+    record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
+    details <- sprintf("Created new trait: %s", tolower(clean_text(trait_name)))
+    DBI::dbExecute(
+      con,
+      "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
+      params = list("traits", record_id, "INSERT", clean_text(user_name), details)
+    )
+
+    message(sprintf("Successfully added trait: '%s'", trait_name))
+    invisible(TRUE)
+  }, error = function(e) {
+    stop("Failed to add trait. Ensure trait_name is unique. Error: ", e$message)
+  })
 }
 
 
@@ -326,47 +529,94 @@ add_trait <- function(db_path = "data/breeding_db.sqlite", trait_name, unit) {
 #'   metadata_list = list(design = "RCBD", irrigation = "Rainfed")
 #' )
 #' }
-add_trial <- function(
-  db_path = "data/breeding_db.sqlite",
-  trial_name,
-  trial_loc,
-  start_date,
-  metadata_list = list()
-) {
+add_trial <- function(db_path = "data/breeding_db.sqlite",
+                      trial_name,
+                      location,
+                      trial_code = NULL,
+                      trial_type = NULL,
+                      objective = NULL,
+                      latitude = NULL,
+                      longitude = NULL,
+                      season = NULL,
+                      year = NULL,
+                      experimental_design = NULL,
+                      number_of_replications = NULL,
+                      principal_investigator = NULL,
+                      project_name = NULL,
+                      planting_date = NULL,
+                      expected_harvest_date = NULL,
+                      actual_harvest_date = NULL,
+                      trial_status = "Planned",
+                      remarks = NULL,
+                      user_name = "Unknown") {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
 
-  # Serialize metadata to JSON
-  metadata_list_lower <- lapply(metadata_list, function(x) {
-    if (is.character(x)) tolower(trimws(x)) else x
-  })
-  metadata_json <- suppressWarnings({
-    jsonlite::toJSON(metadata_list_lower, auto_unbox = TRUE)
-  })
+  # Helper to clean text inputs
+  clean_text <- function(text) {
+    if (is.null(text) || trimws(text) == "") return(NULL)
+    trimws(text)
+  }
 
-  query <- "INSERT INTO trials (trial_name, trial_loc, start_date, metadata) VALUES (?, ?, ?, ?)"
-  tryCatch(
-    {
-      DBI::dbExecute(
-        con,
-        query,
-        params = list(
-          tolower(trimws(trial_name)),
-          tolower(trimws(trial_loc)),
-          as.character(start_date),
-          metadata_json
-        )
-      )
-      message(sprintf("Successfully added trial: '%s'", trial_name))
-      invisible(TRUE)
-    },
-    error = function(e) {
-      stop(
-        "Failed to add trial. Ensure trial_name is unique. Error: ",
-        e$message
-      )
-    }
+  # Helper for dates
+  clean_date <- function(date) {
+    if (is.null(date) || date == "") return(NULL)
+    as.character(date)
+  }
+
+  query <- "
+    INSERT INTO trials (
+      trial_name, trial_code, trial_type, objective, location, latitude, longitude,
+      season, year, experimental_design, number_of_replications, principal_investigator,
+      project_name, planting_date, expected_harvest_date, actual_harvest_date,
+      trial_status, remarks
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+
+  params <- list(
+    clean_text(trial_name),
+    clean_text(trial_code),
+    clean_text(trial_type),
+    clean_text(objective),
+    clean_text(location),
+    latitude,
+    longitude,
+    clean_text(season),
+    year,
+    clean_text(experimental_design),
+    number_of_replications,
+    clean_text(principal_investigator),
+    clean_text(project_name),
+    clean_date(planting_date),
+    clean_date(expected_harvest_date),
+    clean_date(actual_harvest_date),
+    clean_text(trial_status),
+    clean_text(remarks)
   )
+
+  tryCatch({
+    DBI::dbExecute(con, query, params = params)
+    
+    # Log action
+    record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
+    details <- sprintf("Created new trial: %s", clean_text(trial_name))
+    DBI::dbExecute(
+      con,
+      "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
+      params = list("trials", record_id, "INSERT", clean_text(user_name), details)
+    )
+
+    message(sprintf("Successfully added trial: '%s'", trial_name))
+    invisible(TRUE)
+  }, error = function(e) {
+    if (grepl("UNIQUE constraint failed", e$message)) {
+      if (grepl("trial_name", e$message)) {
+        stop("Failed to add trial. The Trial Name is already in use.")
+      } else if (grepl("trial_code", e$message)) {
+        stop("Failed to add trial. The Trial Code is already in use.")
+      }
+    }
+    stop("Failed to add trial. Database error: ", e$message)
+  })
 }
 
 
@@ -400,7 +650,12 @@ add_plot <- function(
   trial_name,
   accession_name,
   plot_number,
-  block
+  replication = NULL,
+  block = NULL,
+  row = NULL,
+  column = NULL,
+  remarks = NULL,
+  user_name = "Unknown"
 ) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
@@ -410,7 +665,7 @@ add_plot <- function(
   t_res <- DBI::dbGetQuery(
     con,
     "SELECT trial_id FROM trials WHERE trial_name = ?",
-    params = list(tolower(trimws(trial_name)))
+    params = list(trimws(trial_name))
   )
   if (nrow(t_res) == 0) {
     stop("Trial name not found in the database.")
@@ -421,19 +676,29 @@ add_plot <- function(
   g_res <- DBI::dbGetQuery(
     con,
     "SELECT germplasm_id FROM germplasm WHERE accession_name = ?",
-    params = list(tolower(trimws(accession_name)))
+    params = list(toupper(trimws(accession_name)))
   )
   if (nrow(g_res) == 0) {
     stop("Accession name not found in the database.")
   }
   germplasm_id <- g_res$germplasm_id[1]
 
-  query <- "INSERT INTO plots (trial_id, germplasm_id, plot_number, block) VALUES (?, ?, ?, ?)"
+  query <- "INSERT INTO plots (trial_id, germplasm_id, plot_number, replication, block, `row`, `column`, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   DBI::dbExecute(
     con,
     query,
-    params = list(trial_id, germplasm_id, plot_number, block)
+    params = list(trial_id, germplasm_id, plot_number, replication, block, row, column, remarks)
   )
+  
+  # Log action
+  record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
+  details <- sprintf("Created plot %s for accession %s in trial %s", plot_number, accession_name, trial_name)
+  DBI::dbExecute(
+    con,
+    "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
+    params = list("plots", record_id, "INSERT", user_name, details)
+  )
+
   invisible(TRUE)
 }
 
@@ -471,7 +736,8 @@ add_observation <- function(
   plot_number,
   trait_name,
   value,
-  user_name
+  user_name,
+  remarks = NULL
 ) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
@@ -488,7 +754,7 @@ add_observation <- function(
   p_res <- DBI::dbGetQuery(
     con,
     p_query,
-    params = list(tolower(trimws(trial_name)), plot_number)
+    params = list(trimws(trial_name), plot_number)
   )
   if (nrow(p_res) == 0) {
     stop("Plot number not found for that trial.")
@@ -515,26 +781,34 @@ add_observation <- function(
       params = list(plot_id, trait_id)
     )
 
+    # Helper to clean text inputs
+    clean_text <- function(text) {
+      if (is.null(text) || trimws(text) == "") return(NULL)
+      trimws(text)
+    }
+
     if (nrow(check_obs) == 0) {
       # Insert new record
       DBI::dbExecute(
         con,
-        "INSERT INTO observations (plot_id, trait_id, value) VALUES (?, ?, ?)",
-        params = list(plot_id, trait_id, value)
+        "INSERT INTO observations (plot_id, trait_id, observation_value, remarks) VALUES (?, ?, ?, ?)",
+        params = list(plot_id, trait_id, clean_text(value), clean_text(remarks))
       )
-      action_type <- "INSERT"
+      action <- "INSERT"
+      record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
     } else {
       # Update existing record (correction/overwrite)
       DBI::dbExecute(
         con,
-        "UPDATE observations SET value = ?, obs_date = CURRENT_TIMESTAMP WHERE plot_id = ? AND trait_id = ?",
-        params = list(value, plot_id, trait_id)
+        "UPDATE observations SET observation_value = ?, remarks = ? WHERE plot_id = ? AND trait_id = ?",
+        params = list(clean_text(value), clean_text(remarks), plot_id, trait_id)
       )
-      action_type <- "UPDATE"
+      action <- "UPDATE"
+      record_id <- check_obs$observation_id[1]
     }
 
     # Format log details
-    log_details <- sprintf(
+    details <- sprintf(
       "Recorded %s: %s for Plot %s (%s)",
       tolower(trimws(trait_name)),
       value,
@@ -543,8 +817,8 @@ add_observation <- function(
     )
     DBI::dbExecute(
       con,
-      "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)",
-      params = list("observations", action_type, tolower(trimws(user_name)), log_details)
+      "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
+      params = list("observations", record_id, action, tolower(trimws(user_name)), details)
     )
   })
 
@@ -579,75 +853,104 @@ add_observation <- function(
 #'   reason = "Harvest from 2026 Trial"
 #' )
 #' }
-add_inventory_deposit <- function(
-  db_path = "data/breeding_db.sqlite",
-  accession_name,
-  amount_grams,
-  storage_location,
-  user_name,
-  reason
-) {
+add_inventory_deposit <- function(db_path = "data/breeding_db.sqlite",
+                                  accession_name,
+                                  quantity,
+                                  unit = "g",
+                                  storage_location,
+                                  user_name,
+                                  container = NULL,
+                                  source_type = NULL,
+                                  source_reference = NULL,
+                                  deposit_reason = NULL,
+                                  seed_status = "Available",
+                                  viability_percent = NULL,
+                                  moisture_percent = NULL,
+                                  storage_condition = NULL,
+                                  deposit_date = Sys.Date(),
+                                  remarks = NULL) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
   DBI::dbExecute(con, "PRAGMA foreign_keys = ON;")
 
-  # Coerce inputs to lowercase for consistency
-  accession_name_clean <- tolower(trimws(accession_name))
-  storage_location_clean <- tolower(trimws(storage_location))
-  user_name_clean <- tolower(trimws(user_name))
-  reason_clean <- tolower(trimws(reason))
+  # --- Validation ---
+  if (quantity <= 0) stop("Quantity must be greater than zero.")
+  if (trimws(storage_location) == "") stop("Storage location cannot be empty.")
+  if (deposit_date > Sys.Date()) stop("Deposit date cannot be in the future.")
+  if (!is.null(viability_percent) && (viability_percent < 0 || viability_percent > 100)) {
+    stop("Viability must be between 0 and 100.")
+  }
 
+  # Helper to clean text inputs
+  clean_text <- function(text) {
+    if (is.null(text) || trimws(text) == "") return(NULL)
+    trimws(text)
+  }
+
+  accession_name_clean <- toupper(clean_text(accession_name))
+  
   # Get germplasm ID
   g_res <- DBI::dbGetQuery(
     con,
     "SELECT germplasm_id FROM germplasm WHERE accession_name = ?",
     params = list(accession_name_clean)
   )
-  if (nrow(g_res) == 0) {
-    stop("Accession name not found in the database.")
-  }
+  if (nrow(g_res) == 0) stop("Accession name not found in the database.")
   germplasm_id <- g_res$germplasm_id[1]
 
   DBI::dbWithTransaction(con, {
-    # Check for existing stock AT THE SPECIFIED LOCATION
-    check_query <- "SELECT quantity FROM inventory WHERE germplasm_id = ? AND storage_location = ?"
-    current_stock <- DBI::dbGetQuery(
-      con,
-      check_query,
-      params = list(germplasm_id, storage_location_clean)
+    # Always insert a new row for each deposit, treating it as a new lot
+    insert_query <- "
+      INSERT INTO inventory (
+        germplasm_id, quantity, unit, storage_location, container, source_type,
+        source_reference, deposit_reason, seed_status, viability_percent,
+        moisture_percent, storage_condition, deposit_date, remarks
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+
+    params <- list(
+      germplasm_id,
+      quantity,
+      clean_text(unit),
+      clean_text(storage_location),
+      clean_text(container),
+      clean_text(source_type),
+      clean_text(source_reference),
+      clean_text(deposit_reason),
+      clean_text(seed_status),
+      viability_percent,
+      moisture_percent,
+      clean_text(storage_condition),
+      as.character(deposit_date),
+      clean_text(remarks)
     )
 
-    if (nrow(current_stock) == 0) {
-      # This is a new entry for this germplasm at this location
-      insert_inv <- "INSERT INTO inventory (germplasm_id, quantity, unit, storage_location) VALUES (?, ?, 'grams', ?)"
-      DBI::dbExecute(
-        con,
-        insert_inv,
-        params = list(germplasm_id, amount_grams, storage_location_clean)
-      )
-    } else {
-      # Stock already exists here; just add to the quantity
-      update_inv <- "UPDATE inventory SET quantity = quantity + ? WHERE germplasm_id = ? AND storage_location = ?"
-      DBI::dbExecute(con, update_inv, params = list(amount_grams, germplasm_id, storage_location_clean))
-    }
+    DBI::dbExecute(con, insert_query, params = params)
 
-    log_query <- "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)"
-    details <- sprintf(
-      "DEPOSIT: %s grams of %s. Reason: %s",
-      amount_grams,
-      accession_name_clean,
-      reason_clean
+    # Log action
+    # Create a structured JSON detail for better history tracking
+    record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
+    details_list <- list(
+      type = "DEPOSIT",
+      accession = accession_name_clean,
+      lot_id = record_id,
+      quantity_before = 0,
+      quantity_changed = quantity,
+      quantity_after = quantity,
+      unit = unit,
+      reason = clean_text(deposit_reason)
     )
+    details_json <- jsonlite::toJSON(details_list, auto_unbox = TRUE)
+    
     DBI::dbExecute(
       con,
-      log_query,
-      params = list("inventory", "DEPOSIT", user_name_clean, details)
+      "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
+      params = list("inventory", record_id, "INSERT", clean_text(user_name), details_json)
     )
   })
   
   message(sprintf(
-    "Successfully deposited %s grams of '%s' into inventory.",
-    amount_grams,
+    "Successfully deposited %s %s of '%s' into inventory.",
+    quantity, unit,
     accession_name
   ))
   invisible(TRUE)
@@ -660,58 +963,70 @@ add_inventory_deposit <- function(
 #'
 #' @param db_path Path to the SQLite file.
 #' @param accession_name The unique identifier of the seed line to update.
-#' @param new_pedigree The new pedigree value.
-#' @param new_species The new species value.
+#' @param updates A named list of columns and their new values to update.
 #' @param user_name The name of the user making the change.
 #'
 #' @return Invisibly returns `TRUE` on success.
 #' @export
-update_germplasm <- function(db_path, accession_name, new_pedigree, new_species, user_name) {
+update_germplasm <- function(db_path, accession_name, updates, user_name) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
-  DBI::dbExecute(con, "PRAGMA foreign_keys = ON;")
 
   # Clean inputs
-  accession_name_clean <- tolower(trimws(accession_name))
-  new_pedigree_clean <- tolower(trimws(new_pedigree))
-  new_species_clean <- tolower(trimws(new_species))
+  accession_name_clean <- toupper(trimws(accession_name))
   user_name_clean <- tolower(trimws(user_name))
+
+  # Clean the update values and remove any empty ones
+  updates_clean <- lapply(updates, function(x) if (is.character(x)) trimws(x) else x)
+  updates_clean <- updates_clean[sapply(updates_clean, function(x) !is.null(x) && x != "")]
+
+  if (length(updates_clean) == 0) {
+    message("No updates to perform.")
+    return(invisible(TRUE))
+  }
 
   DBI::dbWithTransaction(con, {
     # Get current state for logging
     current_data <- DBI::dbGetQuery(
       con,
-      "SELECT pedigree, species FROM germplasm WHERE accession_name = ?",
+      "SELECT * FROM germplasm WHERE accession_name = ?",
       params = list(accession_name_clean)
     )
 
     if (nrow(current_data) == 0) {
       stop("Update failed: Accession name not found.")
     }
+    
+    # Build update query dynamically
+    set_clauses <- paste(names(updates_clean), "= ?", collapse = ", ")
+    query <- sprintf("UPDATE germplasm SET %s WHERE accession_name = ?", set_clauses)
+    params <- c(unname(updates_clean), list(accession_name_clean))
+    
+    DBI::dbExecute(con, query, params = params)
 
-    # Perform the update
-    update_query <- "UPDATE germplasm SET pedigree = ?, species = ? WHERE accession_name = ?"
-    res <- DBI::dbExecute(
-      con,
-      update_query,
-      params = list(new_pedigree_clean, new_species_clean, accession_name_clean)
-    )
+    # Create a detailed log message
+    changes <- sapply(names(updates_clean), function(field) {
+      old_val <- current_data[[field]]
+      new_val <- updates_clean[[field]]
+      # Use `identical` to handle NULLs and avoid logging non-changes
+      if (!identical(as.character(old_val), as.character(new_val))) {
+        sprintf("%s from '%s' to '%s'", field, ifelse(is.na(old_val), "NULL", old_val), new_val)
+      } else {
+        NULL
+      }
+    })
+    changes <- Filter(Negate(is.null), changes)
 
-    # Log the transaction
-    details <- sprintf(
-      "UPDATE %s: pedigree from '%s' to '%s'; species from '%s' to '%s'",
-      accession_name_clean,
-      current_data$pedigree, new_pedigree_clean,
-      current_data$species, new_species_clean
-    )
+    if (length(changes) > 0) {
+      details <- sprintf("UPDATE %s: %s", accession_name_clean, paste(changes, collapse = "; "))
 
-    DBI::dbExecute(
-      con,
-      "INSERT INTO transaction_log (table_name, action_type, user_name, details) VALUES (?, ?, ?, ?)",
-      params = list("germplasm", "UPDATE", user_name_clean, details)
-    )
+      DBI::dbExecute(
+        con,
+        "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
+        params = list("germplasm", current_data$germplasm_id, "UPDATE", user_name_clean, details)
+      )
+    }
   })
-
   invisible(TRUE)
 }
 
@@ -762,17 +1077,17 @@ get_all_traits <- function(db_path) {
   )$trait_name
 }
 
-#' @title Get All Traits with Units
+#' @title Get All Trait Details
 #' @description Retrieves a data frame of all unique trait names and their units.
 #' @param db_path A character string specifying the path to the SQLite file.
-#' @return A data frame with 'trait_name' and 'unit' columns.
+#' @return A data frame with all trait details.
 #' @noRd
-get_all_traits_with_units <- function(db_path) {
+get_all_traits_details <- function(db_path) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
   DBI::dbGetQuery(
     con,
-    "SELECT trait_name, unit FROM traits ORDER BY trait_name"
+    "SELECT trait_id, trait_name, trait_description, unit, data_type, remarks FROM traits ORDER BY trait_name"
   )
 }
 
@@ -780,6 +1095,7 @@ get_all_traits_with_units <- function(db_path) {
 #' @description Extracts all raw, plot-level field data for a single accession across all trials.
 #' @param db_path Path to the SQLite file.
 #' @param accession_name Name of the specific accession to extract.
+#' @importFrom dplyr bind_rows
 #' @return A single data frame of all observations for the accession.
 #' @importFrom dplyr bind_rows
 #' @noRd
@@ -795,24 +1111,24 @@ get_raw_accession_data <- function(db_path, accession_name) {
   dplyr::bind_rows(field_books)
 }
 
-#' @title Get Accession-Specific Audit Ledger
-#' @description Retrieves transaction log entries relevant to a specific accession.
+#' @title Get Accession-Specific Audit Log
+#' @description Retrieves audit log entries relevant to a specific accession.
 #' @param db_path Path to the SQLite file.
 #' @param accession_name The accession name to search for in the log details.
 #' @return A data frame of relevant log entries.
 #' @noRd
-get_accession_ledger <- function(db_path, accession_name) {
+get_accession_audit_log <- function(db_path, accession_name) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
   
   query <- "
-    SELECT timestamp, table_name, action_type, user_name, details
-    FROM transaction_log
+    SELECT action_timestamp, table_name, record_id, action, user_name, details
+    FROM audit_log
     WHERE details LIKE ?
-    ORDER BY timestamp DESC
+    ORDER BY action_timestamp DESC
   "
   
-  search_pattern <- paste0("%", tolower(trimws(accession_name)), "%")
+  search_pattern <- paste0("%", toupper(trimws(accession_name)), "%")
   result <- DBI::dbGetQuery(con, query, params = list(search_pattern))
   return(result)
 }
@@ -858,18 +1174,238 @@ get_inventory_by_species <- function(db_path, species_name) {
   on.exit(DBI::dbDisconnect(con))
   
   query <- "
-    SELECT 
-      g.accession_name, 
-      COALESCE(i.quantity, 0) AS quantity, 
-      COALESCE(i.unit, 'grams') AS unit, 
-      COALESCE(i.storage_location, 'Not Deposited') AS storage_location
+    SELECT
+      g.accession_name,
+      SUM(CASE WHEN i.unit = 'g' THEN i.quantity ELSE 0 END) AS total_grams,
+      SUM(CASE WHEN i.unit = 'kg' THEN i.quantity ELSE 0 END) AS total_kg,
+      SUM(CASE WHEN i.unit = 'Seeds' THEN i.quantity ELSE 0 END) AS total_seeds,
+      SUM(CASE WHEN i.unit = 'Packets' THEN i.quantity ELSE 0 END) AS total_packets,
+      COUNT(i.inventory_id) AS lot_count
     FROM germplasm g
     LEFT JOIN inventory i ON g.germplasm_id = i.germplasm_id
     WHERE g.species = ?
-    ORDER BY g.accession_name, i.storage_location
+    GROUP BY g.accession_name
+    ORDER BY g.accession_name
   "
   
   DBI::dbGetQuery(con, query, params = list(tolower(trimws(species_name))))
+}
+
+#' @title Get Inventory Summary Statistics
+#' @description Calculates key metrics for the inventory dashboard.
+#' @param db_path Path to the SQLite file.
+#' @return A named list of summary statistics.
+#' @noRd
+get_inventory_summary_stats <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  
+  total_accessions <- DBI::dbGetQuery(con, "SELECT COUNT(DISTINCT accession_name) FROM germplasm;")[[1]]
+  total_lots <- DBI::dbGetQuery(con, "SELECT COUNT(inventory_id) FROM inventory;")[[1]]
+  low_stock_lots <- DBI::dbGetQuery(con, "SELECT COUNT(inventory_id) FROM inventory WHERE quantity > 0 AND quantity < 50 AND unit = 'g';")[[1]]
+  empty_lots <- DBI::dbGetQuery(con, "SELECT COUNT(inventory_id) FROM inventory WHERE quantity = 0;")[[1]]
+  
+  list(
+    total_accessions = total_accessions,
+    total_lots = total_lots,
+    low_stock_lots = low_stock_lots,
+    empty_lots = empty_lots
+  )
+}
+
+#' @title Get Inventory Movement History
+#' @description Retrieves and parses inventory movement from the audit log.
+#' @param db_path Path to the SQLite file.
+#' @importFrom jsonlite fromJSON
+#' @importFrom dplyr bind_rows
+#' @return A data frame of inventory movement history.
+#' @noRd
+get_inventory_history <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  
+  # Query for inventory-related audit logs
+  audit_data <- DBI::dbGetQuery(con, "SELECT action_timestamp, details FROM audit_log WHERE table_name = 'inventory' ORDER BY action_timestamp DESC")
+  
+  if (nrow(audit_data) == 0) return(data.frame())
+  
+  # Parse the JSON details column
+  history_list <- lapply(audit_data$details, function(json_str) {
+    tryCatch(jsonlite::fromJSON(json_str), error = function(e) NULL)
+  })
+  
+  # Filter out any parsing errors and bind into a data frame
+  history_df <- dplyr::bind_rows(Filter(Negate(is.null), history_list))
+  history_df$action_timestamp <- audit_data$action_timestamp[sapply(history_list, Negate(is.null))]
+  return(history_df)
+}
+
+#' @title Get All Biological Statuses
+#' @description Retrieves a vector of all unique biological statuses.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of biological statuses.
+#' @noRd
+get_all_biological_statuses <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT biological_status FROM germplasm WHERE biological_status IS NOT NULL ORDER BY biological_status"
+  )$biological_status
+}
+
+#' @title Get All Accession Types
+#' @description Retrieves a vector of all unique accession types.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of accession types.
+#' @noRd
+get_all_accession_types <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT accession_type FROM germplasm WHERE accession_type IS NOT NULL ORDER BY accession_type"
+  )$accession_type
+}
+
+#' @title Get All Seed Sources
+#' @description Retrieves a vector of all unique seed sources.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of seed sources.
+#' @noRd
+get_all_seed_sources <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT seed_source FROM germplasm WHERE seed_source IS NOT NULL ORDER BY seed_source"
+  )$seed_source
+}
+
+#' @title Get All Countries of Origin
+#' @description Retrieves a vector of all unique countries of origin.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of countries.
+#' @noRd
+get_all_countries_of_origin <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT country_of_origin FROM germplasm WHERE country_of_origin IS NOT NULL ORDER BY country_of_origin"
+  )$country_of_origin
+}
+
+#' @title Get All Trial Years
+#' @description Retrieves a vector of all unique trial years.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of years.
+#' @noRd
+get_all_trial_years <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT year FROM trials WHERE year IS NOT NULL ORDER BY year DESC"
+  )$year
+}
+
+#' @title Get All Trial Seasons
+#' @description Retrieves a vector of all unique trial seasons.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of seasons.
+#' @noRd
+get_all_trial_seasons <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT season FROM trials WHERE season IS NOT NULL ORDER BY season"
+  )$season
+}
+
+#' @title Get All Trial Statuses
+#' @description Retrieves a vector of all unique trial statuses.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of statuses.
+#' @noRd
+get_all_trial_statuses <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT trial_status FROM trials WHERE trial_status IS NOT NULL ORDER BY trial_status"
+  )$trial_status
+}
+
+#' @title Get All Trial Types
+#' @description Retrieves a vector of all unique trial types.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of types.
+#' @noRd
+get_all_trial_types <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT trial_type FROM trials WHERE trial_type IS NOT NULL ORDER BY trial_type"
+  )$trial_type
+}
+
+#' @title Get All Principal Investigators
+#' @description Retrieves a vector of all unique PIs.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of PIs.
+#' @noRd
+get_all_principal_investigators <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT principal_investigator FROM trials WHERE principal_investigator IS NOT NULL ORDER BY principal_investigator"
+  )$principal_investigator
+}
+
+#' @title Get All Storage Locations
+#' @description Retrieves a vector of all unique storage locations.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of storage locations.
+#' @noRd
+get_all_storage_locations <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT storage_location FROM inventory WHERE storage_location IS NOT NULL ORDER BY storage_location"
+  )$storage_location
+}
+
+#' @title Get All Seed Statuses
+#' @description Retrieves a vector of all unique seed statuses.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of seed statuses.
+#' @noRd
+get_all_seed_statuses <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT seed_status FROM inventory WHERE seed_status IS NOT NULL ORDER BY seed_status"
+  )$seed_status
+}
+
+#' @title Get All Replication Numbers
+#' @description Retrieves a vector of all unique replication numbers from plots.
+#' @param db_path A character string specifying the path to the SQLite file.
+#' @return A character vector of replication numbers.
+#' @noRd
+get_all_replications <- function(db_path) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbGetQuery(
+    con,
+    "SELECT DISTINCT replication FROM plots WHERE replication IS NOT NULL ORDER BY replication"
+  )$replication
 }
 
 ################################################################################
@@ -912,18 +1448,27 @@ get_inventory_status <- function(
 
   query <- "
     SELECT 
-      g.accession_name, 
-      g.species, 
-      COALESCE(i.quantity, 0) AS quantity, 
-      COALESCE(i.unit, 'grams') AS unit, 
-      COALESCE(i.storage_location, 'Not Deposited') AS storage_location
+      g.accession_name,
+      g.species,
+      i.inventory_id,
+      i.storage_location,
+      i.container,
+      i.quantity,
+      i.unit,
+      i.seed_status,
+      i.source_type,
+      i.source_reference,
+      i.deposit_date,
+      i.viability_percent
     FROM germplasm g
-    LEFT JOIN inventory i ON g.germplasm_id = i.germplasm_id
+    LEFT JOIN (
+      SELECT * FROM inventory WHERE quantity > 0
+    ) i ON g.germplasm_id = i.germplasm_id
   "
 
   if (!is.null(target_accession)) {
     query <- paste0(query, " WHERE g.accession_name = ?")
-    result <- DBI::dbGetQuery(con, query, params = list(tolower(trimws(target_accession))))
+    result <- DBI::dbGetQuery(con, query, params = list(toupper(trimws(target_accession))))
   } else {
     result <- DBI::dbGetQuery(con, query)
   }
@@ -966,12 +1511,14 @@ get_germplasm_passport <- function(
     SELECT 
       g.accession_name,
       g.species,
+      g.preferred_name,
+      g.generation,
       g.pedigree,
       tr.trial_name,
-      tr.trial_loc,
+      tr.location,
       t.trait_name,
       t.unit,
-      AVG(o.value) as value
+      AVG(o.observation_value) as value
     FROM germplasm g
     JOIN plots p ON g.germplasm_id = p.germplasm_id
     JOIN trials tr ON p.trial_id = tr.trial_id
@@ -981,15 +1528,17 @@ get_germplasm_passport <- function(
     GROUP BY 
       g.accession_name, 
       g.species, 
+      g.preferred_name,
+      g.generation,
       g.pedigree, 
       tr.trial_name, 
-      tr.trial_loc, 
+      tr.location, 
       t.trait_name, 
       t.unit
-    ORDER BY tr.start_date DESC
+    ORDER BY tr.planting_date DESC
   "
 
-  result <- DBI::dbGetQuery(con, query, params = list(tolower(trimws(target_accession))))
+  result <- DBI::dbGetQuery(con, query, params = list(toupper(trimws(target_accession))))
   return(result)
 }
 
@@ -1038,14 +1587,26 @@ get_trial_data <- function(
   query <- "
     SELECT 
       tr.trial_name,
-      tr.trial_loc,
-      tr.start_date,
-      tr.metadata,
+      tr.location,
+      tr.planting_date,
+      tr.trial_code,
+      tr.trial_type,
+      tr.objective,
+      tr.year,
+      tr.season,
+      tr.experimental_design,
+      tr.number_of_replications,
+      tr.principal_investigator,
+      tr.project_name,
+      tr.trial_status,
       p.plot_number,
       p.block,
+      p.replication,
+      p.row,
+      p.column,
       g.accession_name,
       t.trait_name,
-      o.value
+      o.observation_value
     FROM trials tr
     JOIN plots p ON tr.trial_id = p.trial_id
     JOIN germplasm g ON p.germplasm_id = g.germplasm_id
@@ -1053,56 +1614,55 @@ get_trial_data <- function(
     JOIN traits t ON o.trait_id = t.trait_id
     WHERE tr.trial_name = ?
   "
-
-  raw_data <- DBI::dbGetQuery(con, query, params = list(tolower(trimws(target_trial_name))))
+  
+  raw_data <- DBI::dbGetQuery(con, query, params = list(trimws(target_trial_name)))
 
   if (nrow(raw_data) == 0) {
     message("No data found for the specified trial.")
     return(NULL)
   }
 
-  # Parse JSON metadata
-  metadata_str <- raw_data$metadata[1]
-  if (is.na(metadata_str) || metadata_str == "") {
-    metadata_list <- list()
-  } else {
-    metadata_list <- tryCatch(
-      {
-        jsonlite::fromJSON(metadata_str)
-      },
-      error = function(e) list()
-    )
-  }
-
   # Subset observation columns
-  obs_df <- raw_data[, c(
+  obs_df <- unique(raw_data[, c(
     "plot_number",
+    "replication",
     "block",
+    "row",
+    "column",
     "accession_name",
     "trait_name",
-    "value"
-  )]
+    "observation_value"
+  )])
 
   # Pivot to wide format
   if (wide_format) {
     obs_df <- reshape(
       obs_df,
-      idvar = c("plot_number", "block", "accession_name"),
+      idvar = c("plot_number", "replication", "block", "row", "column", "accession_name"),
       timevar = "trait_name",
-      v.names = "value",
+      v.names = "observation_value",
       direction = "wide"
     )
     # Clean column prefixes
-    names(obs_df) <- gsub("^value\\.", "", names(obs_df))
+    names(obs_df) <- gsub("^observation_value\\.", "", names(obs_df))
   }
 
   # Return list
   list(
     trial_info = list(
-      name = raw_data$trial_name[1],
-      location = raw_data$trial_loc[1],
-      date = raw_data$start_date[1],
-      custom_parameters = metadata_list
+      trial_name = raw_data$trial_name[1],
+      trial_code = raw_data$trial_code[1],
+      trial_type = raw_data$trial_type[1],
+      objective = raw_data$objective[1],
+      location = raw_data$location[1],
+      year = raw_data$year[1],
+      season = raw_data$season[1],
+      planting_date = raw_data$planting_date[1],
+      experimental_design = raw_data$experimental_design[1],
+      number_of_replications = raw_data$number_of_replications[1],
+      principal_investigator = raw_data$principal_investigator[1],
+      project_name = raw_data$project_name[1],
+      trial_status = raw_data$trial_status[1]
     ),
     observations = obs_df
   )
@@ -1160,9 +1720,12 @@ get_field_book <- function(
       tr.trial_name,
       p.plot_number,
       p.block,
+      p.replication,
+      p.row,
+      p.column,
       g.accession_name,
       t.trait_name,
-      o.value
+      o.observation_value
     FROM trials tr
     JOIN plots p ON tr.trial_id = p.trial_id
     JOIN germplasm g ON p.germplasm_id = g.germplasm_id
@@ -1176,12 +1739,12 @@ get_field_book <- function(
   # Apply filters
   if (!is.null(trial_name)) {
     query <- paste0(query, " AND tr.trial_name = ?")
-    params <- append(params, tolower(trimws(trial_name)))
+    params <- append(params, trimws(trial_name))
   }
 
   if (!is.null(accession_name)) {
     query <- paste0(query, " AND g.accession_name = ?")
-    params <- append(params, tolower(trimws(accession_name)))
+    params <- append(params, toupper(trimws(accession_name)))
   }
 
   raw_data <- DBI::dbGetQuery(con, query, params = params)
@@ -1194,12 +1757,12 @@ get_field_book <- function(
   # Pivot to wide format
   wide_data <- reshape(
     raw_data,
-    idvar = c("trial_name", "plot_number", "block", "accession_name"),
+    idvar = c("trial_name", "plot_number", "replication", "block", "row", "column", "accession_name"),
     timevar = "trait_name",
-    v.names = "value",
+    v.names = "observation_value",
     direction = "wide"
   )
-  names(wide_data) <- gsub("^value\\.", "", names(wide_data))
+  names(wide_data) <- gsub("^observation_value\\.", "", names(wide_data))
 
   list_of_dfs <- split(wide_data, wide_data$trial_name)
 
@@ -1231,13 +1794,14 @@ get_audit_ledger <- function(db_path = "data/breeding_db.sqlite", limit = 100) {
   # Query recent logs
   query <- "
     SELECT 
-      timestamp, 
+      action_timestamp, 
       table_name, 
-      action_type, 
+      record_id,
+      action, 
       user_name, 
       details
-    FROM transaction_log
-    ORDER BY timestamp DESC
+    FROM audit_log
+    ORDER BY action_timestamp DESC
     LIMIT ?
   "
 
@@ -1322,82 +1886,83 @@ get_low_stock <- function(
 #'   reason = "Setup for drought stress block"
 #' )
 #' }
-withdraw_seed <- function(
-  db_path = "data/breeding_db.sqlite",
-  accession_name,
-  withdraw_amount,
-  storage_location,
-  withdraw_unit,
-  user_name,
-  reason
-) {
+withdraw_seed <- function(db_path = "data/breeding_db.sqlite",
+                          inventory_id,
+                          withdraw_amount,
+                          withdraw_unit,
+                          user_name,
+                          reason) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
   DBI::dbExecute(con, "PRAGMA foreign_keys = ON;")
 
-  # Coerce inputs to lowercase for consistency
-  accession_name_clean <- tolower(trimws(accession_name))
-  storage_location_clean <- tolower(trimws(storage_location))
-  user_name_clean <- tolower(trimws(user_name))
-  reason_clean <- tolower(trimws(reason))
+  # --- Validation & Setup ---
+  if (withdraw_amount <= 0) stop("Withdrawal amount must be positive.")
+  user_name_clean <- trimws(user_name)
+  reason_clean <- trimws(reason)
   unit_lower <- tolower(trimws(withdraw_unit))
 
-  g_res <- DBI::dbGetQuery(
-    con,
-    "SELECT germplasm_id FROM germplasm WHERE accession_name = ?",
-    params = list(accession_name_clean)
-  )
-
-  if (nrow(g_res) == 0) {
-    stop("Accession name not found in the database. Please check the spelling.")
-  }
-  germplasm_id <- g_res$germplasm_id[1]
-  
+  # Convert withdrawal amount to grams for consistent comparison
   amount_in_grams <- if (unit_lower %in% c("kg", "kilogram", "kilograms")) {
     withdraw_amount * 1000
   } else {
     withdraw_amount
   }
 
+  # --- Database Transaction ---
   DBI::dbWithTransaction(con, {
-    # Subtract stock if sufficient
+    # Get current stock details for the specific inventory item
+    current_stock <- DBI::dbGetQuery(
+      con,
+      "SELECT i.quantity, i.unit, g.accession_name, i.storage_location
+       FROM inventory i
+       JOIN germplasm g ON i.germplasm_id = g.germplasm_id
+       WHERE i.inventory_id = ?",
+      params = list(inventory_id)
+    )
+
+    if (nrow(current_stock) == 0) {
+      stop("Inventory lot not found. It may have been moved or deleted.")
+    }
+
+    # Check if the units are compatible (can't withdraw grams from 'packets')
+    if (tolower(current_stock$unit) != "g" && tolower(current_stock$unit) != "kg") {
+      stop(paste("Cannot withdraw by weight from a lot measured in", current_stock$unit))
+    }
+
+    # Update the quantity
     update_query <- "
       UPDATE inventory
       SET quantity = quantity - ?
-      WHERE germplasm_id = ? AND storage_location = ? AND quantity >= ?;
+      WHERE inventory_id = ? AND quantity >= ?;
     "
     res <- DBI::dbExecute(
       con,
       update_query,
-      params = list(amount_in_grams, germplasm_id, storage_location_clean, amount_in_grams)
+      params = list(amount_in_grams, inventory_id, amount_in_grams)
     )
 
-    # Check if update succeeded
     if (res == 0) {
-      stop(
-        "Transaction failed: Insufficient seed quantity at the specified location or location does not exist."
-      )
+      stop("Transaction failed: Insufficient seed quantity in the selected lot.")
     }
 
     # Log transaction
-    log_query <- "
-      INSERT INTO transaction_log (table_name, action_type, user_name, details)
-      VALUES (?, ?, ?, ?)
-    "
-    details <- sprintf(
-      "WITHDRAWAL: %s %s of %s from %s. Converted to %s g. Reason: %s",
-      withdraw_amount,
-      unit_lower,
-      accession_name_clean,
-      storage_location_clean,
-      amount_in_grams,
-      reason_clean
+    details_list <- list(
+      type = "WITHDRAWAL",
+      accession = current_stock$accession_name,
+      lot_id = inventory_id,
+      quantity_before = current_stock$quantity,
+      quantity_changed = -amount_in_grams,
+      quantity_after = current_stock$quantity - amount_in_grams,
+      unit = "g", # Standardized to grams
+      reason = clean_text(reason)
     )
-
+    details_json <- jsonlite::toJSON(details_list, auto_unbox = TRUE)
+    
     DBI::dbExecute(
       con,
-      log_query,
-      params = list("inventory", "WITHDRAWAL", user_name_clean, details)
+      "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
+      params = list("inventory", inventory_id, "UPDATE", user_name_clean, details_json)
     )
   })
   
@@ -1405,7 +1970,290 @@ withdraw_seed <- function(
     "Successfully withdrew %s %s of '%s'. Inventory updated.",
     withdraw_amount,
     withdraw_unit,
-    accession_name
+    current_stock$accession_name
   ))
   invisible(TRUE)
+}
+
+#' @title Search and Filter Germplasm
+#' @description Dynamically queries the germplasm table based on user filters.
+#' @param db_path Path to the SQLite database.
+#' @param target_accession Specific accession to search for (optional).
+#' @param bio_status Biological status (e.g., "Landrace"). Use "All" to skip.
+#' @param acc_type Accession type (e.g., "Advanced Line"). Use "All" to skip.
+#' @param source_cat General seed source (e.g., "Gene Bank"). Use "All" to skip.
+#' @param origin_country Country of origin. Use "All" to skip.
+#' @return A data frame of matching germplasm records.
+#' @export
+search_germplasm <- function(
+  db_path = "data/breeding_db.sqlite",
+  target_accession = NULL,
+  bio_status = "All",
+  acc_type = "All",
+  source_cat = "All",
+  origin_country = "All"
+) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  
+  # Base query selecting the most important passport fields
+  query <- "
+    SELECT 
+      accession_name AS 'Accession',
+      species AS 'Species',
+      pedigree AS 'Pedigree',
+      generation AS 'Generation',
+      biological_status AS 'Bio Status',
+      accession_type AS 'Type',
+      seed_source AS 'Source',
+      country_of_origin AS 'Origin',
+      collection_site AS 'Collection Site',
+      status AS 'Status'
+    FROM germplasm
+    WHERE 1=1
+  "
+  
+  params <- list()
+  
+  # Dynamically append filters if the user selected them
+  if (!is.null(target_accession) && target_accession != "") {
+    query <- paste0(query, " AND accession_name LIKE ?")
+    params <- append(params, paste0("%", toupper(trimws(target_accession)), "%"))
+  }
+  
+  if (bio_status != "All") {
+    query <- paste0(query, " AND biological_status = ?")
+    params <- append(params, trimws(bio_status))
+  }
+  
+  if (acc_type != "All") {
+    query <- paste0(query, " AND accession_type = ?")
+    params <- append(params, trimws(acc_type))
+  }
+  
+  if (source_cat != "All") {
+    query <- paste0(query, " AND seed_source = ?")
+    params <- append(params, trimws(source_cat))
+  }
+  
+  if (origin_country != "All") {
+    query <- paste0(query, " AND country_of_origin = ?")
+    params <- append(params, trimws(origin_country))
+  }
+  
+  query <- paste0(query, " ORDER BY accession_name ASC")
+  
+  result <- DBI::dbGetQuery(con, query, params = params)
+  return(result)
+}
+
+#' @title Search and Filter Field Plots
+#' @description Dynamically queries the plots table based on user filters.
+#' @param db_path Path to the SQLite database.
+#' @param search_trial Free text search for Trial Name (optional).
+#' @param search_acc Free text search for Accession Name (optional).
+#' @param rep_num Replication number. Use "All" to skip.
+#' @return A data frame of matching plot records.
+#' @export
+search_plots <- function(
+  db_path = "data/breeding_db.sqlite",
+  search_trial = NULL,
+  search_acc = NULL,
+  rep_num = "All"
+) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  
+  # Base query joining plots, trials, and germplasm
+  query <- "
+    SELECT 
+      tr.trial_name AS 'Trial Name',
+      p.plot_number AS 'Plot Number',
+      g.accession_name AS 'Accession',
+      p.replication AS 'Rep',
+      p.block AS 'Block',
+      p.row AS 'Row',
+      p.column AS 'Column',
+      p.remarks AS 'Remarks'
+    FROM plots p
+    JOIN trials tr ON p.trial_id = tr.trial_id
+    JOIN germplasm g ON p.germplasm_id = g.germplasm_id
+    WHERE 1=1
+  "
+  
+  params <- list()
+  
+  # Dynamically append filters
+  if (!is.null(search_trial) && search_trial != "") {
+    query <- paste0(query, " AND tr.trial_name LIKE ?")
+    params <- append(params, paste0("%", trimws(search_trial), "%"))
+  }
+  
+  if (!is.null(search_acc) && search_acc != "") {
+    query <- paste0(query, " AND g.accession_name LIKE ?")
+    params <- append(params, paste0("%", toupper(trimws(search_acc)), "%"))
+  }
+  
+  if (rep_num != "All") {
+    query <- paste0(query, " AND p.replication = ?")
+    params <- append(params, as.integer(rep_num))
+  }
+  
+  # Order logically by Trial, then Replication, then Plot Number
+  query <- paste0(query, " ORDER BY tr.trial_name ASC, p.replication ASC, p.plot_number ASC")
+  
+  result <- DBI::dbGetQuery(con, query, params = params)
+  return(result)
+}
+
+#' @title Search and Filter Trials
+#' @description Dynamically queries the trials table based on user filters.
+#' @param db_path Path to the SQLite database.
+#' @param search_text Free text search for Trial Name or Code (optional).
+#' @param trial_year The year of the trial. Use "All" to skip.
+#' @param trial_season The season (e.g., "Major", "Minor"). Use "All" to skip.
+#' @param t_status The status (e.g., "Active", "Completed"). Use "All" to skip.
+#' @param t_type The type of trial (e.g., "Yield Trial"). Use "All" to skip.
+#' @param pi_name The Principal Investigator. Use "All" to skip.
+#' @return A data frame of matching trial records.
+#' @export
+search_trials <- function(
+  db_path = "data/breeding_db.sqlite",
+  search_text = NULL,
+  trial_year = "All",
+  trial_season = "All",
+  t_status = "All",
+  t_type = "All",
+  pi_name = "All"
+) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  
+  # Base query selecting key experimental context
+  query <- "
+    SELECT 
+      trial_name AS 'Trial Name',
+      trial_code AS 'Code',
+      trial_type AS 'Type',
+      objective AS 'Objective',
+      location AS 'Location',
+      year AS 'Year',
+      season AS 'Season',
+      experimental_design AS 'Design',
+      principal_investigator AS 'PI',
+      trial_status AS 'Status'
+    FROM trials
+    WHERE 1=1
+  "
+  
+  params <- list()
+  
+  # Dynamically append filters
+  if (!is.null(search_text) && search_text != "") {
+    query <- paste0(query, " AND (trial_name LIKE ? OR trial_code LIKE ?)")
+    search_pattern <- paste0("%", trimws(search_text), "%")
+    params <- append(params, list(search_pattern, search_pattern))
+  }
+  
+  if (trial_year != "All") {
+    query <- paste0(query, " AND year = ?")
+    params <- append(params, as.integer(trial_year))
+  }
+  
+  if (trial_season != "All") {
+    query <- paste0(query, " AND season = ?")
+    params <- append(params, trimws(trial_season))
+  }
+  
+  if (t_status != "All") {
+    query <- paste0(query, " AND trial_status = ?")
+    params <- append(params, trimws(t_status))
+  }
+  
+  if (t_type != "All") {
+    query <- paste0(query, " AND trial_type = ?")
+    params <- append(params, trimws(t_type))
+  }
+  
+  if (pi_name != "All") {
+    query <- paste0(query, " AND principal_investigator LIKE ?")
+    params <- append(params, paste0("%", trimws(pi_name), "%"))
+  }
+  
+  query <- paste0(query, " ORDER BY year DESC, trial_name ASC")
+  
+  result <- DBI::dbGetQuery(con, query, params = params)
+  return(result)
+}
+
+#' @title Search and Filter Seed Inventory
+#' @description Dynamically queries the physical seed inventory.
+#' @param db_path Path to the SQLite database.
+#' @param target_accession Specific accession to search for (optional).
+#' @param storage_loc Storage location (e.g., "Cold_Room_Shelf_A"). Use "All" to skip.
+#' @param seed_stat Status (e.g., "Available", "Exhausted"). Use "All" to skip.
+#' @param seed_src Source type (e.g., "Harvest"). Use "All" to skip.
+#' @param low_stock_threshold Numeric. If provided, only returns stock < threshold.
+#' @return A data frame of matching inventory records.
+#' @export
+search_inventory <- function(
+  db_path = "data/breeding_db.sqlite",
+  target_accession = NULL,
+  storage_loc = "All",
+  seed_stat = "All",
+  seed_src = "All",
+  low_stock_threshold = NULL
+) {
+  con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+  on.exit(DBI::dbDisconnect(con))
+  
+  # Base query joining inventory and germplasm
+  query <- "
+    SELECT 
+      g.accession_name AS 'Accession',
+      i.quantity AS 'Quantity',
+      i.unit AS 'Unit',
+      i.storage_location AS 'Location',
+      i.container AS 'Container',
+      i.seed_status AS 'Status',
+      i.source_type AS 'Source',
+      i.viability_percent AS 'Viability (%)',
+      i.deposit_date AS 'Deposit Date'
+    FROM inventory i
+    JOIN germplasm g ON i.germplasm_id = g.germplasm_id
+    WHERE 1=1
+  "
+  
+  params <- list()
+  
+  # Dynamically append filters
+  if (!is.null(target_accession) && target_accession != "") {
+    query <- paste0(query, " AND g.accession_name LIKE ?")
+    params <- append(params, paste0("%", toupper(trimws(target_accession)), "%"))
+  }
+  
+  if (storage_loc != "All") {
+    query <- paste0(query, " AND i.storage_location = ?")
+    params <- append(params, trimws(storage_loc))
+  }
+  
+  if (seed_stat != "All") {
+    query <- paste0(query, " AND i.seed_status = ?")
+    params <- append(params, trimws(seed_stat))
+  }
+  
+  if (seed_src != "All") {
+    query <- paste0(query, " AND i.source_type = ?")
+    params <- append(params, trimws(seed_src))
+  }
+  
+  if (!is.null(low_stock_threshold) && is.numeric(low_stock_threshold)) {
+    query <- paste0(query, " AND i.quantity < ? AND i.unit IN ('g', 'grams')")
+    params <- append(params, low_stock_threshold)
+  }
+  
+  query <- paste0(query, " ORDER BY g.accession_name ASC, i.quantity DESC")
+  
+  result <- DBI::dbGetQuery(con, query, params = params)
+  return(result)
 }

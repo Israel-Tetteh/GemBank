@@ -59,6 +59,7 @@ app_server <- function(input, output, session) {
       bslib::nav_show(id = "main_tabs", target = "transaction_log_tab", session = session)
       bslib::nav_show(id = "main_tabs", target = "passport_explorer_tab", session = session)
       bslib::nav_show(id = "main_tabs", target = "species_explorer_tab", session = session)
+      bslib::nav_show(id = "main_tabs", target = "germplasm_query_tab", session = session)
 
       # Select a default data tab to show the user.
       bslib::nav_select("main_tabs", selected = "new_entry_tab", session = session)
@@ -69,6 +70,7 @@ app_server <- function(input, output, session) {
       bslib::nav_hide(id = "main_tabs", target = "transaction_log_tab", session = session)
       bslib::nav_hide(id = "main_tabs", target = "passport_explorer_tab", session = session)
       bslib::nav_hide(id = "main_tabs", target = "species_explorer_tab", session = session)
+      bslib::nav_hide(id = "main_tabs", target = "germplasm_query_tab", session = session)
 
       # Ensure the connection tab is selected.
       bslib::nav_select("main_tabs", selected = "db_connection_tab", session = session)
@@ -83,6 +85,15 @@ app_server <- function(input, output, session) {
 
   # Initialize the server logic for the species explorer module.
   mod_species_explorer_server("species_explorer", db_state)
+
+  # Initialize the server logic for the germplasm query module.
+  mod_germplasm_query_server("germplasm_query_1", db_state)
+
+  # Initialize the server logic for the inventory query module.
+  mod_inventory_query_server("inventory_query_1", db_state)
+
+  # Initialize the server logic for the trial query module.
+  mod_trial_query_server("trial_query_1", db_state)
 
   # Render the disconnect button conditionally in the sidebar
   output$disconnect_button_ui <- renderUI({

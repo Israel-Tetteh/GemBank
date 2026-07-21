@@ -1,4 +1,4 @@
-#' Transaction Log Module UI
+#' Inventory Management Module UI
 #' @param id Module id
 #' @import shiny
 #' @importFrom bslib card card_body card_header layout_column_wrap layout_columns
@@ -14,94 +14,133 @@ mod_transaction_log_ui <- function(id) {
     
     div(
       class = "mb-4 text-center",
-      h2(class = "fw-bold", style = "color: #0F766E; font-family: 'Outfit', sans-serif;", "Transaction Log"),
-      p(class = "text-muted", "Monitor real-time seed balances and execute inventory withdrawals.")
+      h2(class = "fw-bold", style = "color: #0F766E; font-family: 'Outfit', sans-serif;", "Inventory Management"),
+      p(class = "text-muted", "Manage seed lots, register new inventory, perform withdrawals, and view history.")
     ),
     
-    bslib::layout_columns(
-      col_widths = c(8, 4),
+    bslib::card(
+      class = "shadow-sm border-0 mb-3",
+      bslib::card_body(
+        textInput(
+          ns("user_name"),
+          tagList(bsicons::bs_icon("person-badge-fill"), " Breeder's Name (for logging):"),
+          value = "Israel Tetteh"
+        )
+      )
+    ),
+    
+    bslib::navset_card_underline(
+      title = "Inventory Operations",
       
-      # LEFT: Live Inventory Table
-      bslib::card(
-        class = "shadow-sm border-0",
-        bslib::card_header(
-          class = "bg-white fw-bold",
-          tagList(bsicons::bs_icon("table"), " Live Vault Balances")
+      # TAB 1: SEED INVENTORY DASHBOARD
+      bslib::nav_panel("Seed Inventory",
+        # Summary Value Boxes
+        uiOutput(ns("summary_cards_ui")),
+        
+        # Filters
+        bslib::card(
+          class = "shadow-sm border-0 mb-3",
+          bslib::card_header("Filters"),
+          bslib::card_body(
+            bslib::layout_column_wrap(width = 1/4,
+              selectizeInput(ns("filter_species"), "Crop Species", choices = NULL, multiple = TRUE),
+              selectizeInput(ns("filter_location"), "Storage Location", choices = NULL, multiple = TRUE),
+              selectizeInput(ns("filter_status"), "Seed Status", choices = NULL, multiple = TRUE),
+              numericInput(ns("filter_low_stock_threshold"), "Filter by Max Quantity (g)", value = NA, min = 0)
+            )
+          )
         ),
-        bslib::card_body(
-          DT::DTOutput(ns("inventory_table"))
+        
+        # Main Inventory Table
+        bslib::card(
+          class = "shadow-sm border-0",
+          bslib::card_header(tagList(bsicons::bs_icon("table"), " Live Vault Balances")),
+          bslib::card_body(DT::DTOutput(ns("inventory_table")))
         )
       ),
       
-      # RIGHT: Withdrawal Form
-      bslib::card(
-        class = "shadow-sm border-0",
-        bslib::card_header(
-          class = "bg-white fw-bold text-danger",
-          tagList(bsicons::bs_icon("box-arrow-up-right"), " Withdraw Seed")
-        ),
-        bslib::card_body(
-          class = "p-4",
-          p(class = "text-muted small mb-4", "Remove seeds from the cold room for planting, sharing, or testing."),
-          
-          selectizeInput(
-            ns("w_accession"),
-            "Target Accession",
-            choices = NULL,
-            width = "100%"
-          ),
-          
-          selectizeInput(
-            ns("w_location"),
-            "Storage Location",
-            choices = NULL, # Will be populated dynamically
-            width = "100%"
-          ),
-          # Dynamic text to show available stock
-          shiny::div(
-            class = "alert alert-info py-2 px-3 mt-2 small",
-            style = "background-color: #E0F2FE !important; color: #075985 !important; border-color: #BAE6FD !important;",
-            shiny::textOutput(ns("available_stock_text"))
-          ),
-          
-          bslib::layout_column_wrap(
-            width = 1/2,
-            numericInput(
-              ns("w_amount"),
-              "Amount",
-              value = 10,
-              min = 0.1,
-              width = "100%"
+      # TAB 2: REGISTER SEED LOT
+      bslib::nav_panel("Register Seed Lot",
+        bslib::card(
+          class = "shadow-sm border-0",
+          bslib::card_header(tagList(bsicons::bs_icon("box-seam"), " Register New Seed Lot")),
+          bslib::card_body(
+            p(class = "text-muted small mb-4", "Add a new physical seed lot to a storage location. The breeder's name above will be used for logging."),
+            h6("Core Information", class="text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(width = 1/3,
+              selectizeInput(ns("reg_accession"), "Select Accession (Required)", choices = NULL),
+              textInput(ns("reg_location"), "Storage Location (Required)", placeholder = "e.g., Cold Room A"),
+              textInput(ns("reg_container"), "Container", placeholder = "e.g., Bottle 2")
             ),
-            selectInput(
-              ns("w_unit"),
-              "Unit",
-              choices = c("grams", "kg"),
-              selected = "grams",
-              width = "100%"
-            )
-          ),
-          
-          textInput(
-            ns("w_operator"),
-            "Breeder's Name:",
-            placeholder = "e.g., Dr. Kena",
-            width = "100%"
-          ),
-          
-          textInput(
-            ns("w_reason"),
-            "Reason for Withdrawal",
-            placeholder = "e.g., Planting 2026 Trial",
-            width = "100%"
-          ),
-          
-          hr(),
-          
-          actionButton(
-            ns("btn_withdraw"),
-            "Execute Withdrawal",
-            class = "btn btn-danger rounded-pill fw-bold w-100"
+            h6("Quantity & Condition", class="text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(width = 1/3,
+              numericInput(ns("reg_quantity"), "Quantity (Required)", value = 100, min = 0.1),
+              selectInput(ns("reg_unit"), "Unit", choices = c("g", "kg", "Seeds", "Packets"), selected = "g"),
+              selectInput(ns("reg_seed_status"), "Seed Status", choices = c("Available", "Reserved", "Testing", "Regeneration"), selected = "Available")
+            ),
+            h6("Provenance (Source)", class="text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(width = 1/3,
+              selectInput(ns("reg_source_type"), "Source Type", choices = c("", "Harvest", "Research Institution", "Gene Bank", "Farmer", "Purchase", "Donation", "Exchange", "Regeneration", "Unknown")),
+              textInput(ns("reg_source_reference"), "Source Reference", placeholder = "e.g., 2026 Bird Trial, ICRISAT"),
+              textInput(ns("reg_deposit_reason"), "Reason for Deposit", placeholder = "e.g., Post Harvest, Backup")
+            ),
+            h6("Quality & Storage", class="text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(width = 1/3,
+              numericInput(ns("reg_viability"), "Viability (%)", value = NA, min = 0, max = 100),
+              numericInput(ns("reg_moisture"), "Moisture (%)", value = NA, min = 0, max = 100),
+              textInput(ns("reg_storage_condition"), "Storage Condition", placeholder = "e.g., 4°C, -20°C")
+            ),
+            h6("Dates & Remarks", class="text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(width = 1/2,
+              dateInput(ns("reg_deposit_date"), "Deposit Date"),
+              textAreaInput(ns("reg_remarks"), "Remarks", placeholder = "Any other notes about this lot...", width = "100%", rows = 2)
+            ),
+            hr(),
+            actionButton(ns("btn_register_lot"), "Register Seed Lot", class = "btn btn-success rounded-pill fw-bold float-end px-4")
+          )
+        )
+      ),
+      
+      # TAB 3: WITHDRAW SEED
+      bslib::nav_panel("Withdraw Seed",
+        bslib::card(
+          class = "shadow-sm border-0",
+          bslib::card_header(class = "text-danger", tagList(bsicons::bs_icon("box-arrow-up-right"), " Withdraw Seed")),
+          bslib::card_body(
+            p(class = "text-muted small mb-4", "Remove seeds from the cold room for planting, sharing, or testing. The breeder's name above will be used for logging."),
+            h6("Step 1: Select Accession", class="fw-bold"),
+            selectizeInput(ns("w_accession"), NULL, choices = NULL, width = "100%"),
+            
+            h6("Step 2: Select Seed Lot", class="fw-bold mt-4"),
+            selectizeInput(ns("w_inventory_id"), NULL, choices = NULL, width = "100%"),
+            uiOutput(ns("w_lot_details_ui")),
+            
+            h6("Step 3: Specify Withdrawal Details", class="fw-bold mt-4"),
+            bslib::layout_column_wrap(width = 1/2,
+              numericInput(ns("w_amount"), "Amount to Withdraw", value = 10, min = 0.1, width = "100%"),
+              selectInput(ns("w_unit"), "Unit", choices = c("grams", "kg"), selected = "grams", width = "100%")
+            ),
+            selectInput(ns("w_reason"), "Purpose of Withdrawal", 
+                        choices = c("", "Planting Trial", "Seed Multiplication", "DNA Extraction", "Germination Test", "Distribution", "Student Research", "Other"),
+                        width = "100%"),
+            textAreaInput(ns("w_remarks"), "Remarks (Optional)", placeholder = "e.g., For 2027 PYT", width = "100%"),
+            
+            uiOutput(ns("w_summary_ui")),
+            
+            hr(),
+            actionButton(ns("btn_withdraw"), "Execute Withdrawal", class = "btn btn-danger rounded-pill fw-bold w-100")
+          )
+        )
+      ),
+      
+      # TAB 4: INVENTORY HISTORY
+      bslib::nav_panel("Inventory History",
+        bslib::card(
+          class = "shadow-sm border-0",
+          bslib::card_header(tagList(bsicons::bs_icon("clock-history"), " Lot Movement History")),
+          bslib::card_body(
+            p(class = "text-muted small mb-4", "Track all deposits, withdrawals, and adjustments for every seed lot."),
+            DT::DTOutput(ns("history_table"))
           )
         )
       )
@@ -109,7 +148,7 @@ mod_transaction_log_ui <- function(id) {
   )
 }
 
-#' Transaction Log Module Server
+#' Inventory Management Module Server
 #' @param id Module id
 #' @param db_state A `reactiveValues` object from `app_server` holding the database path.
 #' @noRd
@@ -117,22 +156,77 @@ mod_transaction_log_server <- function(id, db_state) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # A reactive trigger to manually refresh data after a database write (e.g., withdrawal).
     refresh_trigger <- reactiveVal(0)
-    
-    # Reactive value to hold inventory data for the currently selected accession.
-    selected_accession_inventory <- reactiveVal(data.frame())
-    
-    # Render the main data table showing current inventory levels.
-    output$inventory_table <- DT::renderDT({
+    full_inventory_data <- reactiveVal(data.frame())
+
+    # OBSERVE: Main data fetcher, depends on DB path and refresh trigger
+    observeEvent(list(db_state$path, refresh_trigger()), {
       path <- db_state$path
       req(path)
-      refresh_trigger() # Establish a dependency on the refresh trigger.
-      
       tryCatch({
-        df <- get_inventory_status(path)
+        full_inventory_data(get_inventory_status(path))
         
-        # Apply conditional styling to highlight low-stock accessions.
+        # Update filter choices
+        inv_data <- full_inventory_data()
+        updateSelectizeInput(session, "filter_species", choices = unique(inv_data$species), server = TRUE)
+        updateSelectizeInput(session, "filter_location", choices = unique(inv_data$storage_location), server = TRUE)
+        updateSelectizeInput(session, "filter_status", choices = unique(inv_data$seed_status), server = TRUE)
+        
+        # Update accession dropdowns
+        acc_choices <- unique(inv_data$accession_name)
+        updateSelectizeInput(session, "reg_accession", choices = acc_choices, selected = character(0), server = TRUE)
+        updateSelectizeInput(session, "w_accession", choices = acc_choices, selected = character(0), server = TRUE)
+
+      }, error = function(e) {
+        full_inventory_data(data.frame())
+      })
+    })
+
+    # REACTIVE: Filtered inventory data for the main dashboard table
+    filtered_data <- reactive({
+      df <- full_inventory_data()
+      req(df)
+      
+      if (!is.null(input$filter_species) && length(input$filter_species) > 0) {
+        df <- df[df$species %in% input$filter_species, ]
+      }
+      if (!is.null(input$filter_location) && length(input$filter_location) > 0) {
+        df <- df[df$storage_location %in% input$filter_location, ]
+      }
+      if (!is.null(input$filter_status) && length(input$filter_status) > 0) {
+        df <- df[df$seed_status %in% input$filter_status, ]
+      }
+      # Apply quantity filter only if a value is provided
+      if (!is.na(input$filter_low_stock_threshold)) {
+        df <- df[!is.na(df$quantity) & df$quantity < input$filter_low_stock_threshold & df$unit == 'g', ]
+      }
+      df
+    })
+
+    # REACTIVE: Summary statistics for the value boxes
+    summary_stats <- reactive({
+      req(db_state$path)
+      refresh_trigger()
+      get_inventory_summary_stats(db_state$path)
+    })
+
+    # RENDER: Summary cards UI
+    output$summary_cards_ui <- renderUI({
+      stats <- summary_stats()
+      req(stats)
+      
+      bslib::layout_columns(
+        bslib::value_box("Total Accessions", stats$total_accessions, showcase = bs_icon("tree"), theme="success"),
+        bslib::value_box("Total Seed Lots", stats$total_lots, showcase = bs_icon("collection"), theme="info"),
+        bslib::value_box("Low Stock Lots", stats$low_stock_lots, showcase = bs_icon("exclamation-triangle"), theme="warning"),
+        bslib::value_box("Empty Lots", stats$empty_lots, showcase = bs_icon("trash"), theme="danger")
+      )
+    })
+
+    # RENDER: Main inventory table
+    output$inventory_table <- DT::renderDT({
+      df <- filtered_data()
+      tryCatch({
         DT::datatable(
           df,
           extensions = 'Buttons',
@@ -146,8 +240,9 @@ mod_transaction_log_server <- function(id, db_state) {
           class = 'cell-border stripe hover'
         ) |>
           DT::formatStyle(
-            'quantity',
-            color = DT::styleInterval(c(50, 500), c('red', 'orange', 'black')),
+            'quantity', 'seed_status',
+            backgroundColor = DT::styleEqual(c('Exhausted', 'Archived'), c('#FECACA', '#E5E7EB')),
+            color = DT::styleInterval(c(0.1, 50), c('red', 'orange', 'black')),
             fontWeight = DT::styleInterval(50, c('bold', 'normal'))
           )
       }, error = function(e) {
@@ -155,67 +250,99 @@ mod_transaction_log_server <- function(id, db_state) {
       })
     })
     
-    # Observer to update accession choices when the database path or data changes.
-    observeEvent(list(db_state$path, refresh_trigger()), {
-      path <- db_state$path
-      req(path)
-      
+    # --- REGISTER SEED LOT TAB ---
+    observeEvent(input$btn_register_lot, {
+      # Validation
+      if (is.null(input$reg_accession) || input$reg_accession == "") {
+        shinyWidgets::show_alert("Error", "An accession must be selected.", type = "error"); return()
+      }
+      if (trimws(input$reg_location) == "") {
+        shinyWidgets::show_alert("Error", "Storage location is required.", type = "error"); return()
+      }
+      if (input$reg_quantity <= 0) {
+        shinyWidgets::show_alert("Error", "Quantity must be greater than zero.", type = "error"); return()
+      }
+      if (input$reg_deposit_date > Sys.Date()) {
+        shinyWidgets::show_alert("Error", "Deposit date cannot be in the future.", type = "error"); return()
+      }
+
       tryCatch({
-        con <- DBI::dbConnect(RSQLite::SQLite(), path)
-        on.exit(DBI::dbDisconnect(con))
-        
-        # Directly and efficiently query for only those accessions that have
-        # at least one entry in the inventory table. This is more robust than
-        # fetching all germplasm and filtering in R.
-        acc_choices <- DBI::dbGetQuery(con, 
-          "SELECT DISTINCT g.accession_name 
-           FROM germplasm g 
-           JOIN inventory i ON g.germplasm_id = i.germplasm_id
-           ORDER BY g.accession_name"
-        )$accession_name
-        updateSelectizeInput(session, "w_accession", choices = acc_choices, selected = character(0), server = TRUE)
+        add_inventory_deposit(
+          db_path = db_state$path,
+          accession_name = input$reg_accession,
+          quantity = input$reg_quantity,
+          unit = input$reg_unit,
+          storage_location = trimws(input$reg_location),
+          user_name = trimws(input$user_name),
+          container = input$reg_container,
+          source_type = input$reg_source_type,
+          source_reference = input$reg_source_reference,
+          deposit_reason = input$reg_deposit_reason,
+          seed_status = input$reg_seed_status,
+          viability_percent = input$reg_viability,
+          moisture_percent = input$reg_moisture,
+          storage_condition = input$reg_storage_condition,
+          deposit_date = input$reg_deposit_date,
+          remarks = input$reg_remarks
+        )
+        shinyWidgets::show_alert("Success", "New seed lot registered successfully!", type = "success")
+        refresh_trigger(refresh_trigger() + 1)
       }, error = function(e) {
-        # Fail silently if the database is empty or an error occurs during the fetch.
+        shinyWidgets::show_alert("Error", e$message, type = "error")
       })
     })
-    
-    # Observer to dynamically update storage locations based on selected accession.
+
+    # --- WITHDRAW SEED TAB ---
+    w_selected_lot <- reactiveVal(NULL)
+
     observeEvent(input$w_accession, {
-      path <- db_state$path
       accession <- input$w_accession
+      req(accession, accession != "")
       
-      # Ensure inputs are available before proceeding.
-      req(path, accession, accession != "")
+      acc_inventory <- full_inventory_data()
+      acc_inventory <- acc_inventory[acc_inventory$accession_name == accession & acc_inventory$quantity > 0, ]
       
-      tryCatch({
-        # Directly query for the locations and stock of the selected accession.
-        # This is more robust and efficient than the previous implementation.
-        con <- DBI::dbConnect(RSQLite::SQLite(), path)
-        on.exit(DBI::dbDisconnect(con))
-        
-        query <- "
-          SELECT i.storage_location, i.quantity, i.unit
-          FROM inventory i
-          JOIN germplasm g ON i.germplasm_id = g.germplasm_id
-          WHERE g.accession_name = ?
-        "
-        acc_inventory <- DBI::dbGetQuery(con, query, params = list(accession))
-        
-        # Store this data for use in other observers
-        selected_accession_inventory(acc_inventory)
-        
-        # Update the location dropdown with valid choices.
-        updateSelectizeInput(session, "w_location", choices = acc_inventory$storage_location, selected = character(0), server = TRUE)
-        
-      }, error = function(e) {
-        updateSelectizeInput(session, "w_location", choices = character(0), server = TRUE)
-      })
-    }, ignoreInit = TRUE) # ignoreInit prevents running on startup before w_accession is set.
-    
-    # Observer to handle the 'Execute Withdrawal' button click.
-    # This now shows a confirmation modal instead of withdrawing directly.
+      if (nrow(acc_inventory) > 0) {
+        lot_choices <- setNames(
+          acc_inventory$inventory_id,
+          sprintf("Lot #%s: %s (%s) - %.2f %s", acc_inventory$inventory_id, acc_inventory$storage_location, acc_inventory$container, acc_inventory$quantity, acc_inventory$unit)
+        )
+        updateSelectizeInput(session, "w_inventory_id", choices = lot_choices, selected = character(0), server = TRUE)
+      } else {
+        updateSelectizeInput(session, "w_inventory_id", choices = c("No available lots for this accession" = ""), selected = "", server = TRUE)
+      }
+    }, ignoreInit = TRUE)
+
+    observeEvent(input$w_inventory_id, {
+      req(input$w_inventory_id)
+      lot_id <- as.integer(input$w_inventory_id)
+      lot_data <- full_inventory_data()[full_inventory_data()$inventory_id == lot_id, ]
+      w_selected_lot(lot_data)
+    })
+
+    output$w_lot_details_ui <- renderUI({
+      lot <- w_selected_lot()
+      req(lot)
+      div(class="alert alert-info p-2 mt-2",
+          p(strong("Current Qty: "), sprintf("%.2f %s", lot$quantity, lot$unit)),
+          p(strong("Location: "), sprintf("%s (%s)", lot$storage_location, lot$container))
+      )
+    })
+
+    output$w_summary_ui <- renderUI({
+      lot <- w_selected_lot(); req(lot)
+      withdraw_qty <- input$w_amount; req(withdraw_qty)
+      remaining <- lot$quantity - withdraw_qty
+      
+      div(class="alert alert-warning p-2 mt-3",
+          p(strong("Current: "), sprintf("%.2f %s", lot$quantity, lot$unit)),
+          p(strong("Withdraw: "), sprintf("%.2f %s", withdraw_qty, input$w_unit)),
+          p(strong("Remaining: "), sprintf("%.2f %s", remaining, lot$unit))
+      )
+    })
+
     observeEvent(input$btn_withdraw, {
-      req(input$w_accession, input$w_location, input$w_amount, input$w_operator, input$w_reason)
+      req(input$w_inventory_id, input$w_amount, input$user_name, input$w_reason != "")
       path <- db_state$path
       req(path)
       
@@ -223,9 +350,8 @@ mod_transaction_log_server <- function(id, db_state) {
         title = tagList(bsicons::bs_icon("exclamation-triangle-fill", class = "text-warning"), " Confirm Withdrawal"),
         p(
           "Please confirm you want to withdraw",
-          strong(paste(input$w_amount, input$w_unit)), "of",
-          strong(input$w_accession), "from",
-          strong(input$w_location), "."
+          strong(paste(input$w_amount, input$w_unit)), "from seed lot",
+          strong(paste0("#", input$w_inventory_id)), "."
         ),
         p("This action will be recorded in the transaction log and cannot be undone."),
         footer = tagList(
@@ -236,20 +362,17 @@ mod_transaction_log_server <- function(id, db_state) {
       ))
     })
     
-    # Observer for the final confirmation button inside the modal.
     observeEvent(input$btn_confirm_withdraw, {
-      # Remove the modal dialog
       removeModal()
       
       tryCatch({
         withdraw_seed(
           db_path = db_state$path,
-          accession_name = input$w_accession,
-          storage_location = trimws(input$w_location),
+          inventory_id = input$w_inventory_id,
           withdraw_amount = input$w_amount,
           withdraw_unit = input$w_unit,
-          user_name = trimws(input$w_operator),
-          reason = trimws(input$w_reason)
+          user_name = trimws(input$user_name),
+          reason = trimws(input$w_reason) # In new design, this is 'purpose'
         )
 
         shinyWidgets::show_alert(
@@ -259,12 +382,9 @@ mod_transaction_log_server <- function(id, db_state) {
         )
 
         # Reset form inputs for the next transaction.
-        updateSelectizeInput(session, "w_accession", selected = character(0))
-        updateSelectizeInput(session, "w_location", choices = character(0), selected = character(0))
         updateNumericInput(session, "w_amount", value = 10)
-        updateTextInput(session, "w_reason", value = "")
+        updateSelectizeInput(session, "w_reason", selected = "")
 
-        # Increment the trigger to refresh the data table and dropdowns.
         refresh_trigger(refresh_trigger() + 1)
 
       }, error = function(e) {
@@ -275,22 +395,24 @@ mod_transaction_log_server <- function(id, db_state) {
         )
       })
     })
-    
-    # Render the available stock text based on selections
-    output$available_stock_text <- renderText({
-      inv_data <- selected_accession_inventory()
-      location <- input$w_location
+
+    # --- INVENTORY HISTORY TAB ---
+    output$history_table <- renderDT({
+      req(db_state$path)
+      refresh_trigger()
       
-      req(nrow(inv_data) > 0, location != "")
-      
-      stock_info <- inv_data[inv_data$storage_location == location, ]
-      
-      if (nrow(stock_info) == 1) {
-        paste("Available at this location:", stock_info$quantity, stock_info$unit)
-      } else {
-        "Select a location to see available stock."
-      }
+      history_data <- get_inventory_history(db_state$path)
+      DT::datatable(
+        history_data,
+        extensions = 'Buttons',
+        options = list(
+          pageLength = 15,
+          dom = 'Bfrtip',
+          buttons = c('copy', 'csv', 'excel', 'pdf'),
+          scrollX = TRUE
+        ),
+        rownames = FALSE
+      )
     })
-    
   })
 }

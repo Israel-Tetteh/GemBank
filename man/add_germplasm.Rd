@@ -7,8 +7,21 @@
 add_germplasm(
   db_path = "data/breeding_db.sqlite",
   accession_name,
-  pedigree,
-  species
+  species,
+  preferred_name = NULL,
+  pedigree = NULL,
+  biological_status = "Unknown",
+  accession_type = NULL,
+  seed_source = NULL,
+  source_name = NULL,
+  country_of_origin = NULL,
+  collection_site = NULL,
+  collector_name = NULL,
+  acquisition_date = NULL,
+  generation = NULL,
+  status = "Available",
+  remarks = NULL,
+  user_name = "Unknown"
 )
 }
 \arguments{
@@ -17,9 +30,9 @@ Defaults to `"data/breeding_db.sqlite"`.}
 
 \item{accession_name}{Unique identifier for the seed line.}
 
-\item{pedigree}{Genetic background or cross.}
-
 \item{species}{Biological species (e.g., "Sorghum bicolor", "Vigna unguiculata").}
+
+\item{pedigree}{Genetic background or cross.}
 }
 \value{
 Invisibly returns `TRUE` on success, or throws an error on failure.

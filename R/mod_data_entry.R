@@ -1,5 +1,6 @@
 #' Data Entry Module UI
 #' @param id Module id
+#' @importFrom bslib layout_column_wrap
 #' @import shiny
 #' @importFrom shinyWidgets show_alert
 #' @noRd
@@ -46,74 +47,62 @@ mod_data_entry_ui <- function(id) {
         bslib::accordion_panel(
           title = tagList("1. Germplasm", bsicons::bs_icon("tree-fill")),
           value = "germplasm",
-              h5(
-                class = "fw-bold text-success mb-3",
-                "Register New Accession"
-              ),
-              p(class = "text-muted small mb-4", "Add a new seed line or variety to the passport database."),
-              textInput(
-                ns("g_name"),
-                "Accession Name (Unique)",
-                placeholder = "e.g., SC-2026-001",
-                width = '100%'
-              ),
-              textInput(
-                ns("g_pedigree"),
-                "Pedigree / Cross",
-                placeholder = "e.g., Local-Landrace-A",
-                width = '100%'
-              ),
-              textInput(
-                ns("g_species"),
-                "Species",
-                placeholder = "e.g., Sorghum bicolor",
-                width = '100%'
-              ),
-              hr(),
-              actionButton(
-                ns("btn_add_germplasm"),
-                "Register Germplasm",
-                class = "btn btn-success rounded-pill fw-bold float-end px-4"
-          )
-        ),
-
-        # ========================================================
-        # TAB 2: INVENTORY
-        # ========================================================
-        bslib::accordion_panel(
-          title = tagList("2. Inventory", bsicons::bs_icon("box-seam")),
-          value = "inventory",
-              h5(class = "fw-bold text-info mb-3", "Inventory Deposit"),
-              p(class = "text-muted small mb-4", "Add physical seeds to a storage location."),
-              bslib::layout_column_wrap(
-                width = 1 / 2,
-                selectizeInput(
-                  ns("inv_accession"),
-                  "Select Accession",
-                  choices = NULL
-                ),
-                numericInput(
-                  ns("inv_amount"),
-                  "Amount (grams)",
-                  value = 100,
-                  min = 1
-                ),
-                textInput(
-                  ns("inv_location"),
-                  "Storage Location",
-                  placeholder = "e.g., Cold_Room_Shelf_A"
-                ),
-                textInput(
-                  ns("inv_reason"),
-                  "Reason for Deposit",
-                  placeholder = "e.g., 2026 Harvest"
-                )
-              ),
-              hr(),
-              actionButton(
-                ns("btn_add_deposit"),
-                "Deposit to Inventory",
-                class = "btn btn-info text-white rounded-pill fw-bold float-end px-4"
+          h5(class = "fw-bold text-success mb-3", "Register New Accession"),
+          p(class = "text-muted small mb-4", "Add a new seed line or variety to the passport database."),
+          
+          h6("Identification", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(
+            width = 1/3,
+            textInput(ns("g_name"), "Accession Name", placeholder = "e.g., SC-2026-001"),
+            textInput(ns("g_preferred_name"), "Preferred/Local Name", placeholder = "e.g., Asontem"),
+            textInput(ns("g_species"), "Species (Required)", placeholder = "e.g., Sorghum bicolor")
+          ),
+          
+          h6("Classification & Status", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(
+            width = 1/3,
+            selectInput(ns("g_biological_status"), "Biological Status",
+                        choices = c("Unknown", "Landrace", "Breeding Line", "Cultivar", "Wild Relative", "Population"),
+                        selected = "Unknown"),
+            selectInput(ns("g_accession_type"), "Accession Type",
+                        choices = c("", "Released Variety", "Advanced Line", "Experimental Line", "Parent", "Check", "Elite Line", "Population")),
+            selectInput(ns("g_status"), "Status",
+                        choices = c("Available", "Inactive", "Archived", "Exhausted", "Regenerating"),
+                        selected = "Available")
+          ),
+          
+          h6("Source & Origin", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(
+            width = 1/3,
+            selectInput(ns("g_seed_source"), "Seed Source",
+                        choices = c("", "Harvest", "Research Institution", "Farmer", "Gene Bank", "Purchase", "Donation", "Exchange", "Company", "Unknown")),
+            textInput(ns("g_source_name"), "Source Name", placeholder = "e.g., CSIR-SARI, ICRISAT"),
+            textInput(ns("g_country_of_origin"), "Country of Origin", placeholder = "e.g., Ghana")
+          ),
+          
+          h6("Collection Information", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(
+            width = 1/3,
+            textInput(ns("g_collection_site"), "Collection Site", placeholder = "e.g., Tamale"),
+            textInput(ns("g_collector_name"), "Collector Name", placeholder = "e.g., Dr. Kena"),
+            dateInput(ns("g_acquisition_date"), "Acquisition Date (at KNUST)")
+          ),
+          
+          h6("Breeding Information", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(
+            width = 1/2,
+            textInput(ns("g_pedigree"), "Pedigree / Cross", placeholder = "e.g., A x B"),
+            textInput(ns("g_generation"), "Generation", placeholder = "e.g., F4, BC1F2")
+          ),
+          
+          h6("Additional Remarks", class="text-primary fw-bold mt-4"),
+          textAreaInput(ns("g_remarks"), "Remarks", placeholder = "Any other relevant notes...", width = "100%", rows = 3),
+          
+          hr(),
+          actionButton(
+            ns("btn_add_germplasm"),
+            "Register Germplasm",
+            class = "btn btn-success rounded-pill fw-bold float-end px-4"
           )
         ),
 
@@ -129,20 +118,28 @@ mod_data_entry_ui <- function(id) {
                 "Define Trait Vocabulary"
               ),
               p(class = "text-muted small mb-4", "Define a standard phenotypic trait before recording it."),
-              selectizeInput(
-                ns("tr_name"),
-                "Trait Name (Select or Create)",
-                choices = NULL,
-                options = list(
-                  create = TRUE,
-                  placeholder = "e.g., Awn_Length"
-                )
+              bslib::layout_column_wrap(width = 1/2,
+                selectizeInput(
+                  ns("tr_name"),
+                  "Trait Name (Select or Create)",
+                  choices = NULL,
+                  options = list(
+                    create = TRUE,
+                    placeholder = "e.g., Awn_Length"
+                  )
+                ),
+                selectInput(ns("tr_data_type"), "Data Type",
+                            choices = c("", "Numeric", "Text", "Score", "Boolean", "Date"))
               ),
-              textInput(
-                ns("tr_unit"),
-                "Unit of Measurement",
-                placeholder = "e.g., cm, kg/ha, Score(1-5)"
+              bslib::layout_column_wrap(width = 1/2,
+                textInput(
+                  ns("tr_unit"),
+                  "Unit of Measurement",
+                  placeholder = "e.g., cm, kg/ha, Score(1-5)"
+                ),
+                textInput(ns("tr_description"), "Description", placeholder = "e.g., Length of the awn in centimeters")
               ),
+              textAreaInput(ns("tr_remarks"), "Remarks", placeholder = "Any other notes about this trait definition...", width = "100%", rows = 2),
               hr(),
               actionButton(
                 ns("btn_add_trait"),
@@ -158,56 +155,56 @@ mod_data_entry_ui <- function(id) {
         bslib::accordion_panel(
           title = tagList("4. Trials", bsicons::bs_icon("clipboard-check")),
           value = "trials",
-              h5(
-                class = "fw-bold text-primary mb-3",
-                "Create Field Trial"
-              ),
-              p(class = "text-muted small mb-4", "Initialize an experimental field or greenhouse trial."),
-              bslib::layout_column_wrap(
-                width = 1 / 2,
-                textInput(
-                  ns("t_name"),
-                  "Trial Name (Unique)",
-                  placeholder = "e.g., 2026_Yield_Test"
-                ),
-                textInput(
-                  ns("t_loc"),
-                  "Trial Location",
-                  placeholder = "e.g., KNUST_Agric_Field"
-                ),
-                dateInput(
-                  ns("t_date"),
-                  "Start Date",
-                  format = "yyyy-mm-dd"
-                )
-              ),
-              tags$label(
-                "Trial Metadata",
-                class = "control-label mt-3 fw-bold"
-              ),
-              bslib::layout_column_wrap(
-                width = 1 / 2,
-                textInput(
-                  ns("t_meta_design"),
-                  "Experimental Design",
-                  placeholder = "e.g., Alpha Lattice"
-                ),
-                textInput(
-                  ns("t_meta_dim"),
-                  "Plot Dimensions",
-                  placeholder = "e.g., 3m x 0.25m"
-                ),
-                textInput(
-                  ns("t_meta_sup"),
-                  "Supervisor",
-                  placeholder = "e.g., Dr. Wireko Kena"
-                )
-              ),
-              hr(),
-              actionButton(
-                ns("btn_add_trial"),
-                "Initialize Trial",
-                class = "btn btn-primary rounded-pill fw-bold float-end px-4"
+          h5(class = "fw-bold text-primary mb-3", "Create Field Trial"),
+          p(class = "text-muted small mb-4", "Initialize an experimental field or greenhouse trial."),
+          
+          h6("Core Details", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(width = 1/3,
+            textInput(ns("t_name"), "Trial Name (Required, Unique)", placeholder = "e.g., 2026 Bird Damage Trial"),
+            textInput(ns("t_code"), "Trial Code (Unique)", placeholder = "e.g., BDT-2026"),
+            selectInput(ns("t_type"), "Trial Type", choices = c("", "Yield Trial", "Disease Screening", "Nursery", "Seed Multiplication", "Observation Trial", "Stress Screening", "Hybrid Evaluation", "Advanced Yield Trial", "Multi-location Trial", "Quality Evaluation", "Other"))
+          ),
+          
+          h6("Objective & Location", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(width = 1/2,
+            textAreaInput(ns("t_objective"), "Scientific Objective", placeholder = "e.g., Evaluate drought tolerance.", rows = 2),
+            textInput(ns("t_location"), "Location (Required)", placeholder = "e.g., KNUST Research Farm")
+          ),
+          bslib::layout_column_wrap(width = 1/2,
+            numericInput(ns("t_lat"), "Latitude", value = NA),
+            numericInput(ns("t_lon"), "Longitude", value = NA)
+          ),
+          
+          h6("Season & Dates", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(width = 1/3,
+            numericInput(ns("t_year"), "Year", value = format(Sys.Date(), "%Y")),
+            selectInput(ns("t_season"), "Season", choices = c("", "Major", "Minor", "Dry Season", "Wet Season")),
+            selectInput(ns("t_status"), "Trial Status", choices = c("Planned", "Active", "Completed", "Cancelled", "Archived"), selected = "Planned")
+          ),
+          bslib::layout_column_wrap(width = 1/3,
+            dateInput(ns("t_planting_date"), "Planting Date"),
+            dateInput(ns("t_expected_harvest_date"), "Expected Harvest Date"),
+            dateInput(ns("t_actual_harvest_date"), "Actual Harvest Date")
+          ),
+          
+          h6("Design & Management", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(width = 1/3,
+            textInput(ns("t_exp_design"), "Experimental Design", placeholder = "e.g., RCBD, Alpha Lattice"),
+            numericInput(ns("t_reps"), "Number of Replications", value = 1, min = 1),
+            textInput(ns("t_pi"), "Principal Investigator", placeholder = "e.g., Dr. Kena")
+          ),
+          
+          h6("Project & Metadata", class="text-primary fw-bold mt-4"),
+          bslib::layout_column_wrap(width = 1/2,
+            textInput(ns("t_project"), "Project Name", placeholder = "e.g., Green Evolution"),
+            textAreaInput(ns("t_remarks"), "Remarks", placeholder = "General comments about the trial.", rows = 3)
+          ),
+          
+          hr(),
+          actionButton(
+            ns("btn_add_trial"),
+            "Initialize Trial",
+            class = "btn btn-primary rounded-pill fw-bold float-end px-4"
           )
         ),
 
@@ -235,21 +232,19 @@ mod_data_entry_ui <- function(id) {
                 choices = NULL
               )
             ),
+              h6("Plot Layout Details", class="text-primary fw-bold mt-4"),
               bslib::layout_column_wrap(
-                width = 1 / 2,
-                numericInput(
-                  ns("p_number"),
-                  "Plot Number",
-                  value = 101,
-                  min = 1
-                ),
-                numericInput(
-                  ns("p_block"),
-                  "Block / Rep",
-                  value = 1,
-                  min = 1
-                )
+                width = 1/3,
+                numericInput(ns("p_number"), "Plot Number", value = 101, min = 1),
+                numericInput(ns("p_replication"), "Replication", value = 1, min = 1),
+                numericInput(ns("p_block"), "Block (optional)", value = NA)
               ),
+              bslib::layout_column_wrap(
+                width = 1/2,
+                numericInput(ns("p_row"), "Row (optional)", value = NA),
+                numericInput(ns("p_column"), "Column (optional)", value = NA)
+              ),
+              textAreaInput(ns("p_remarks"), "Remarks", placeholder = "Any notes about this specific plot...", width = "100%", rows = 2),
               hr(),
               actionButton(
                 ns("btn_add_plot"),
@@ -290,13 +285,13 @@ mod_data_entry_ui <- function(id) {
                   "Target Trait",
                   choices = NULL
                 ),
-                numericInput(
+                textInput(
                   ns("obs_value"),
                   "Measured Value",
-                  value = 0,
-                  step = 0.1
+                  placeholder = "Enter value..."
                 )
               ),
+              textAreaInput(ns("obs_remarks"), "Remarks", placeholder = "Any notes about this observation...", width = "100%", rows = 2),
               hr(),
               actionButton(
                 ns("btn_add_obs"),
@@ -333,12 +328,11 @@ mod_data_entry_server <- function(id, db_state) {
           acc_list <- get_all_accessions(path)
           trial_list <- get_all_trials(path)
 
-          # Fetch traits with units, store the data, and get the names for dropdowns
-          traits_df <- get_all_traits_with_units(path)
+          # Fetch all trait details, store the data, and get the names for dropdowns
+          traits_df <- get_all_traits_details(path)
           all_traits_data(traits_df)
           trait_list <- traits_df$trait_name
           
-          updateSelectizeInput(session, "inv_accession", choices = acc_list, server = TRUE)
           updateSelectizeInput(session, "p_accession", choices = acc_list, server = TRUE)
           updateSelectizeInput(session, "p_trial", choices = trial_list, server = TRUE)
           updateSelectizeInput(session, "obs_trial", choices = trial_list, server = TRUE)
@@ -362,11 +356,17 @@ mod_data_entry_server <- function(id, db_state) {
       trait_info <- traits_df[traits_df$trait_name == selected_trait, ]
 
       if (nrow(trait_info) == 1) {
-        # It's an existing trait, so auto-fill the unit
-        updateTextInput(session, "tr_unit", value = trait_info$unit)
+        # It's an existing trait, so auto-fill the fields
+        updateTextInput(session, "tr_unit", value = if (is.na(trait_info$unit)) "" else trait_info$unit)
+        updateTextInput(session, "tr_description", value = if (is.na(trait_info$trait_description)) "" else trait_info$trait_description)
+        updateSelectInput(session, "tr_data_type", selected = if (is.na(trait_info$data_type)) "" else trait_info$data_type)
+        updateTextAreaInput(session, "tr_remarks", value = if (is.na(trait_info$remarks)) "" else trait_info$remarks)
       } else {
-        # It's a new trait, so clear the unit field for the user to fill
+        # It's a new trait, so clear the fields for the user to fill
         updateTextInput(session, "tr_unit", value = "")
+        updateTextInput(session, "tr_description", value = "")
+        updateSelectInput(session, "tr_data_type", selected = "")
+        updateTextAreaInput(session, "tr_remarks", value = "")
       }
     }, ignoreInit = TRUE, ignoreNULL = TRUE)
     
@@ -393,69 +393,112 @@ mod_data_entry_server <- function(id, db_state) {
     
     # 1. Add Germplasm
     observeEvent(input$btn_add_germplasm, {
-      req(input$g_name, input$g_species)
+      # Validation
+      if (trimws(input$g_name) == "" || trimws(input$g_species) == "") {
+        shinyWidgets::show_alert("Error", "Accession Name and Species are required.", type = "error")
+        return()
+      }
+      if (!is.null(input$g_acquisition_date) && input$g_acquisition_date > Sys.Date()) {
+        shinyWidgets::show_alert("Error", "Acquisition date cannot be in the future.", type = "error")
+        return()
+      }
+
       run_db_op("Germplasm registered!", {
-        add_germplasm(db_state$path, trimws(input$g_name), trimws(input$g_pedigree), trimws(input$g_species))
-      })
-    })
-    
-    # 2. Add Inventory Deposit
-    observeEvent(input$btn_add_deposit, {
-      req(input$inv_accession, input$inv_amount, input$inv_location, input$user_name)
-      run_db_op("Inventory deposit successful!", {
-        add_inventory_deposit(
+        add_germplasm(
           db_path = db_state$path,
-          accession_name = input$inv_accession,
-          amount_grams = input$inv_amount,
-          storage_location = trimws(input$inv_location),
-          user_name = trimws(input$user_name),
-          reason = trimws(input$inv_reason)
+          accession_name = input$g_name,
+          species = input$g_species,
+          preferred_name = input$g_preferred_name,
+          pedigree = input$g_pedigree,
+          biological_status = input$g_biological_status,
+          accession_type = input$g_accession_type,
+          seed_source = input$g_seed_source,
+          source_name = input$g_source_name,
+          country_of_origin = input$g_country_of_origin,
+          collection_site = input$g_collection_site,
+          collector_name = input$g_collector_name,
+          acquisition_date = input$g_acquisition_date,
+          generation = input$g_generation,
+          status = input$g_status,
+          remarks = input$g_remarks,
+          user_name = trimws(input$user_name)
         )
       })
     })
     
     # 3. Add Trial
     observeEvent(input$btn_add_trial, {
-      req(input$t_name, input$t_loc)
+      # --- Validation ---
+      if (trimws(input$t_name) == "" || trimws(input$t_location) == "") {
+        shinyWidgets::show_alert("Error", "Trial Name and Location are required.", type = "error"); return()
+      }
+      if (!is.na(input$t_reps) && input$t_reps < 1) {
+        shinyWidgets::show_alert("Error", "Number of Replications must be at least 1.", type = "error"); return()
+      }
+      if (!is.null(input$t_planting_date) && !is.null(input$t_expected_harvest_date) && input$t_expected_harvest_date < input$t_planting_date) {
+        shinyWidgets::show_alert("Error", "Expected Harvest Date cannot be before Planting Date.", type = "error"); return()
+      }
+      if (!is.null(input$t_planting_date) && !is.null(input$t_actual_harvest_date) && input$t_actual_harvest_date < input$t_planting_date) {
+        shinyWidgets::show_alert("Error", "Actual Harvest Date cannot be before Planting Date.", type = "error"); return()
+      }
+
       run_db_op("Trial initialized!", {
-        # Construct metadata list based on user text inputs
-        meta <- list()
-        if (trimws(input$t_meta_design) != "") meta$experimental_design <- trimws(input$t_meta_design)
-        if (trimws(input$t_meta_dim) != "") meta$plot_dimensions <- trimws(input$t_meta_dim)
-        if (trimws(input$t_meta_sup) != "") meta$supervisor <- trimws(input$t_meta_sup)
-        
         add_trial(
           db_path = db_state$path,
-          trial_name = trimws(input$t_name),
-          trial_loc = trimws(input$t_loc),
-          start_date = as.character(input$t_date),
-          metadata_list = meta
+          trial_name = input$t_name,
+          location = input$t_location,
+          trial_code = input$t_code,
+          trial_type = input$t_type,
+          objective = input$t_objective,
+          latitude = input$t_lat,
+          longitude = input$t_lon,
+          season = input$t_season,
+          year = input$t_year,
+          experimental_design = input$t_exp_design,
+          number_of_replications = input$t_reps,
+          principal_investigator = input$t_pi,
+          project_name = input$t_project,
+          planting_date = input$t_planting_date,
+          expected_harvest_date = input$t_expected_harvest_date,
+          actual_harvest_date = input$t_actual_harvest_date,
+          trial_status = input$t_status,
+          remarks = input$t_remarks,
+          user_name = trimws(input$user_name)
         )
       })
     })
     
     # 4. Add Plot
     observeEvent(input$btn_add_plot, {
-      req(input$p_trial, input$p_accession, input$p_number, input$p_block)
+      req(input$p_trial, input$p_accession, input$p_number)
       run_db_op("Plot record created!", {
         add_plot(
           db_path = db_state$path,
           trial_name = input$p_trial,
           accession_name = input$p_accession,
           plot_number = input$p_number,
-          block = input$p_block
+          replication = input$p_replication,
+          block = input$p_block,
+          row = input$p_row,
+          column = input$p_column,
+          remarks = input$p_remarks,
+          user_name = trimws(input$user_name)
         )
       })
     })
     
     # 5. Add Trait
     observeEvent(input$btn_add_trait, {
-      req(input$tr_name, input$tr_unit)
+      req(input$tr_name)
       run_db_op("Trait registered!", {
         add_trait(
           db_path = db_state$path,
           trait_name = trimws(input$tr_name),
-          unit = trimws(input$tr_unit)
+          trait_description = input$tr_description,
+          unit = input$tr_unit,
+          data_type = input$tr_data_type,
+          remarks = input$tr_remarks,
+          user_name = trimws(input$user_name)
         )
       })
     })
@@ -470,7 +513,8 @@ mod_data_entry_server <- function(id, db_state) {
           plot_number = input$obs_plot,
           trait_name = input$obs_trait,
           value = input$obs_value,
-          user_name = trimws(input$user_name)
+          user_name = trimws(input$user_name),
+          remarks = input$obs_remarks
         )
       })
     })

@@ -10,7 +10,8 @@ add_observation(
   plot_number,
   trait_name,
   value,
-  user_name
+  user_name,
+  remarks = NULL
 )
 }
 \arguments{

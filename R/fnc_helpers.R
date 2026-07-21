@@ -68,13 +68,6 @@ disconnect_db_session <- function(db_state, session) {
   # 2. Clear the saved configuration file to prevent auto-reconnection.
   save_db_config("")
 
-  # 3. Switch the user's view back to the main connection tab
-  bslib::nav_select(
-    "main_tabs",
-    selected = "Database Connection",
-    session = session
-  )
-
   # 4. Provide feedback to the user
   shinyWidgets::show_alert(
     title = "Disconnected",

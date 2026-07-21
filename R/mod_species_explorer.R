@@ -66,8 +66,12 @@ mod_species_explorer_server <- function(id, db_state) {
       req(data)
       
       # Calculate summary stats
+      inv_summary <- data$inventory
       total_accessions <- nrow(data$accessions)
-      total_inventory <- sum(data$inventory$quantity[data$inventory$storage_location != "Not Deposited"])
+      
+      total_g <- sum(inv_summary$total_grams, na.rm = TRUE)
+      total_kg_in_g <- sum(inv_summary$total_kg, na.rm = TRUE) * 1000
+      total_inventory_grams <- total_g + total_kg_in_g
       
       tagList(
         # Summary Value Boxes
@@ -80,8 +84,8 @@ mod_species_explorer_server <- function(id, db_state) {
             theme = "success"
           ),
           bslib::value_box(
-            title = "Total Seed in Inventory (grams)",
-            value = format(total_inventory, big.mark = ","),
+            title = "Total Seed Weight (grams)",
+            value = format(total_inventory_grams, big.mark = ","),
             showcase = bs_icon("box-seam-fill"),
             theme = "info"
           )
@@ -96,7 +100,7 @@ mod_species_explorer_server <- function(id, db_state) {
           ),
           bslib::card(
             class = "shadow-sm border-0",
-            bslib::card_header("Inventory Details"),
+            bslib::card_header("Inventory Summary"),
             bslib::card_body(DT::renderDT(DT::datatable(data$inventory, rownames = FALSE)))
           )
         )

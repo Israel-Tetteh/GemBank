@@ -6,9 +6,8 @@
 \usage{
 withdraw_seed(
   db_path = "data/breeding_db.sqlite",
-  accession_name,
+  inventory_id,
   withdraw_amount,
-  storage_location,
   withdraw_unit,
   user_name,
   reason
@@ -18,17 +17,17 @@ withdraw_seed(
 \item{db_path}{A character string specifying the path to the SQLite file.
 Defaults to `"data/breeding_db.sqlite"`.}
 
-\item{accession_name}{The unique identifier of the seed line.}
-
 \item{withdraw_amount}{Numeric quantity of seeds to remove.}
-
-\item{storage_location}{Identifier for the freezer or cold room from which to withdraw.}
 
 \item{withdraw_unit}{Unit of the amount (e.g., "g", "grams", "kg", "kilograms").}
 
 \item{user_name}{Name of the researcher withdrawing the seeds.}
 
 \item{reason}{Details regarding the withdrawal (e.g., "Screenhouse trial control").}
+
+\item{accession_name}{The unique identifier of the seed line.}
+
+\item{storage_location}{Identifier for the freezer or cold room from which to withdraw.}
 }
 \value{
 Invisibly returns `TRUE` on success, or throws an error on failure.

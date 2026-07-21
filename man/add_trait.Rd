@@ -4,7 +4,15 @@
 \alias{add_trait}
 \title{Add a Trait Definition}
 \usage{
-add_trait(db_path = "data/breeding_db.sqlite", trait_name, unit)
+add_trait(
+  db_path = "data/breeding_db.sqlite",
+  trait_name,
+  trait_description = NULL,
+  unit = NULL,
+  data_type = NULL,
+  remarks = NULL,
+  user_name = "Unknown"
+)
 }
 \arguments{
 \item{db_path}{A character string specifying the path to the SQLite file.

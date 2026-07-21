@@ -105,6 +105,12 @@ mod_setup_ui <- function(id) {
                     title = "Select working path cluster container",
                     class = "btn btn-outline-secondary fw-bold w-100 mb-3 rounded-pill"
                   ),
+                  textInput(
+                    ns("new_db_filename"),
+                    label = "Database Filename",
+                    placeholder = "Gembank_db",
+                    width = "100%"
+                  ),
                   actionButton(
                     ns("create_btn"),
                     label = "Initialize Schema Architecture",
@@ -190,6 +196,9 @@ mod_setup_server <- function(id, db_state) {
 
         if (is_valid_db) {
           shinyWidgets::show_alert("Success", "Secure cluster mounted successfully!", type = "success")
+          # Ensure the schema is up-to-date by running init_db.
+          # This will add any missing tables (like audit_log) to an older database.
+          init_db(path)
           db_state$path <- path  # Update global state, triggers UI changes in app_server
         } else {
           shinyWidgets::show_alert("Error", "Aborted: File path is valid but lacks schema configurations.", type = "error")
@@ -205,7 +214,13 @@ mod_setup_server <- function(id, db_state) {
         return()
       }
 
-      filename <- "Gembank_db.sqlite"
+      db_name <- trimws(input$new_db_filename)
+      if (db_name == "") {
+        shinyWidgets::show_alert("Warning", "Please provide a filename for the database.", type = "warning")
+        return()
+      }
+
+      filename <- paste0(db_name, ".sqlite")
 
       target_db_path <- file.path(dir_path, filename)
 
