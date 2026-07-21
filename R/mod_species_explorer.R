@@ -28,18 +28,36 @@ mod_species_explorer_ui <- function(id) {
       )
     ),
     
-    # Results Area
-    uiOutput(ns("species_results_ui"))
+    # Summary Value Boxes (dynamically rendered)
+    uiOutput(ns("summary_cards_ui")),
+    
+    # Data Tables (static layout, dynamic content)
+    bslib::layout_columns(
+      bslib::card(
+        class = "shadow-sm border-0",
+        bslib::card_header("Accession List"),
+        bslib::card_body(DT::DTOutput(ns("accessions_table")))
+      ),
+      bslib::card(
+        class = "shadow-sm border-0",
+        bslib::card_header("Inventory Summary"),
+        bslib::card_body(DT::DTOutput(ns("inventory_table")))
+      )
+    )
   )
 }
 
 #' Species Explorer Module Server
 #' @param id Module id
 #' @param db_state A `reactiveValues` object from `app_server` holding the database path.
+#' @return A `reactive` that triggers when an accession is clicked.
 #' @noRd
 mod_species_explorer_server <- function(id, db_state) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    
+    # Reactive to communicate the clicked accession to the parent server
+    clicked_accession <- reactiveVal()
     
     # Populate the species dropdown when the database is connected
     observeEvent(db_state$path, {
@@ -60,52 +78,53 @@ mod_species_explorer_server <- function(id, db_state) {
       )
     })
     
-    # Render the dynamic UI for the selected species
-    output$species_results_ui <- renderUI({
+    # Render the summary value boxes
+    output$summary_cards_ui <- renderUI({
       data <- species_data()
       req(data)
       
-      # Calculate summary stats
       inv_summary <- data$inventory
-      total_accessions <- nrow(data$accessions)
-      
       total_g <- sum(inv_summary$total_grams, na.rm = TRUE)
       total_kg_in_g <- sum(inv_summary$total_kg, na.rm = TRUE) * 1000
       total_inventory_grams <- total_g + total_kg_in_g
       
-      tagList(
-        # Summary Value Boxes
-        bslib::layout_columns(
-          col_widths = c(6, 6),
-          bslib::value_box(
-            title = "Total Accessions",
-            value = total_accessions,
-            showcase = bs_icon("tree-fill"),
-            theme = "success"
-          ),
-          bslib::value_box(
-            title = "Total Seed Weight (grams)",
-            value = format(total_inventory_grams, big.mark = ","),
-            showcase = bs_icon("box-seam-fill"),
-            theme = "info"
-          )
+      bslib::layout_columns(
+        col_widths = c(6, 6),
+        bslib::value_box(
+          title = "Total Accessions",
+          value = nrow(data$accessions),
+          showcase = bs_icon("tree-fill"),
+          theme = "success"
         ),
-        
-        # Data Tables
-        bslib::layout_columns(
-          bslib::card(
-            class = "shadow-sm border-0",
-            bslib::card_header("Accession List"),
-            bslib::card_body(DT::renderDT(DT::datatable(data$accessions, rownames = FALSE)))
-          ),
-          bslib::card(
-            class = "shadow-sm border-0",
-            bslib::card_header("Inventory Summary"),
-            bslib::card_body(DT::renderDT(DT::datatable(data$inventory, rownames = FALSE)))
-          )
+        bslib::value_box(
+          title = "Total Seed Weight (grams)",
+          value = format(total_inventory_grams, big.mark = ","),
+          showcase = bs_icon("box-seam-fill"),
+          theme = "info"
         )
       )
     })
     
+    # Render the accessions table
+    output$accessions_table <- DT::renderDT({
+      req(species_data()$accessions)
+      DT::datatable(species_data()$accessions, rownames = FALSE, selection = 'single', options = list(dom = 'ftp'))
+    })
+    
+    # Render the inventory summary table
+    output$inventory_table <- DT::renderDT({
+      req(species_data()$inventory)
+      DT::datatable(species_data()$inventory, rownames = FALSE, selection = 'none', options = list(dom = 'ftp'))
+    })
+    
+    # When a row is clicked in the accessions table, capture the accession name
+    observeEvent(input$accessions_table_rows_selected, {
+      selected_row <- input$accessions_table_rows_selected
+      req(selected_row)
+      accession_name <- species_data()$accessions[selected_row, "accession_name"]
+      clicked_accession(accession_name)
+    })
+    
+    return(clicked_accession)
   })
 }

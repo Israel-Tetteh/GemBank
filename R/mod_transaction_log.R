@@ -11,135 +11,316 @@ mod_transaction_log_ui <- function(id) {
   
   fluidPage(
     style = "background-color: #F8FAFC; padding: 20px;",
-    
+
     div(
       class = "mb-4 text-center",
-      h2(class = "fw-bold", style = "color: #0F766E; font-family: 'Outfit', sans-serif;", "Inventory Management"),
-      p(class = "text-muted", "Manage seed lots, register new inventory, perform withdrawals, and view history.")
+      h2(
+        class = "fw-bold",
+        style = "color: #0F766E; font-family: 'Outfit', sans-serif;",
+        "Inventory Management"
+      ),
+      p(
+        class = "text-muted",
+        "Manage seed lots, register new inventory, perform withdrawals, and view history."
+      )
     ),
-    
+
     bslib::card(
       class = "shadow-sm border-0 mb-3",
       bslib::card_body(
         textInput(
           ns("user_name"),
-          tagList(bsicons::bs_icon("person-badge-fill"), " Breeder's Name (for logging):"),
+          tagList(
+            bsicons::bs_icon("person-badge-fill"),
+            " Breeder's Name (for logging):"
+          ),
           value = "Israel Tetteh"
         )
       )
     ),
-    
-    bslib::navset_card_underline(
-      title = "Inventory Operations",
+
+    bslib::navset_card_pill(
       
+      # TAB 2: REGISTER SEED LOT
+      bslib::nav_panel(
+        "Register Seed Lot",
+        bslib::card(
+          class = "shadow-sm border-0",
+          bslib::card_header(tagList(
+            bsicons::bs_icon("box-seam"),
+            " Register New Seed Lot"
+          )),
+          bslib::card_body(
+            p(
+              class = "text-muted small mb-4",
+              "Add a new physical seed lot to a storage location. The breeder's name above will be used for logging."
+            ),
+            h6("Core Information", class = "text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(
+              width = 1 / 3,
+              selectizeInput(
+                ns("reg_accession"),
+                "Select Accession (Required)",
+                choices = NULL
+              ),
+              textInput(
+                ns("reg_location"),
+                "Storage Location (Required)",
+                placeholder = "e.g., Cold Room A"
+              ),
+              textInput(
+                ns("reg_container"),
+                "Container",
+                placeholder = "e.g., Bottle 2"
+              )
+            ),
+            h6("Quantity & Condition", class = "text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(
+              width = 1 / 3,
+              numericInput(
+                ns("reg_quantity"),
+                "Quantity (Required)",
+                value = 100,
+                min = 0.1
+              ),
+              selectInput(
+                ns("reg_unit"),
+                "Unit",
+                choices = c("g", "kg", "Seeds", "Packets"),
+                selected = "g"
+              ),
+              selectInput(
+                ns("reg_seed_status"),
+                "Seed Status",
+                choices = c("Available", "Reserved", "Testing", "Regeneration"),
+                selected = "Available"
+              )
+            ),
+            h6("Provenance (Source)", class = "text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(
+              width = 1 / 3,
+              selectInput(
+                ns("reg_source_type"),
+                "Source Type",
+                choices = c(
+                  "",
+                  "Harvest",
+                  "Research Institution",
+                  "Gene Bank",
+                  "Farmer",
+                  "Purchase",
+                  "Donation",
+                  "Exchange",
+                  "Regeneration",
+                  "Unknown"
+                )
+              ),
+              textInput(
+                ns("reg_source_reference"),
+                "Source Reference",
+                placeholder = "e.g., 2026 Bird Trial, ICRISAT"
+              ),
+              textInput(
+                ns("reg_deposit_reason"),
+                "Reason for Deposit",
+                placeholder = "e.g., Post Harvest, Backup"
+              )
+            ),
+            h6("Quality & Storage", class = "text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(
+              width = 1 / 3,
+              numericInput(
+                ns("reg_viability"),
+                "Viability (%)",
+                value = NA,
+                min = 0,
+                max = 100
+              ),
+              numericInput(
+                ns("reg_moisture"),
+                "Moisture (%)",
+                value = NA,
+                min = 0,
+                max = 100
+              ),
+              textInput(
+                ns("reg_storage_condition"),
+                "Storage Condition",
+                placeholder = "e.g., 4°C, -20°C"
+              )
+            ),
+            h6("Dates & Remarks", class = "text-primary fw-bold mt-4"),
+            bslib::layout_column_wrap(
+              width = 1 / 2,
+              dateInput(ns("reg_deposit_date"), "Deposit Date"),
+              textAreaInput(
+                ns("reg_remarks"),
+                "Remarks",
+                placeholder = "Any other notes about this lot...",
+                width = "100%",
+                rows = 2
+              )
+            ),
+            hr(),
+            actionButton(
+              ns("btn_register_lot"),
+              "Register Seed Lot",
+              class = "btn btn-success rounded-pill fw-bold float-end px-4"
+            )
+          )
+        )
+      ),
+
       # TAB 1: SEED INVENTORY DASHBOARD
-      bslib::nav_panel("Seed Inventory",
+      bslib::nav_panel(
+        "Seed Inventory",
         # Summary Value Boxes
         uiOutput(ns("summary_cards_ui")),
-        
+
         # Filters
         bslib::card(
           class = "shadow-sm border-0 mb-3",
           bslib::card_header("Filters"),
           bslib::card_body(
-            bslib::layout_column_wrap(width = 1/4,
-              selectizeInput(ns("filter_species"), "Crop Species", choices = NULL, multiple = TRUE),
-              selectizeInput(ns("filter_location"), "Storage Location", choices = NULL, multiple = TRUE),
-              selectizeInput(ns("filter_status"), "Seed Status", choices = NULL, multiple = TRUE),
-              numericInput(ns("filter_low_stock_threshold"), "Filter by Max Quantity (g)", value = NA, min = 0)
+            bslib::layout_column_wrap(
+              width = 1 / 4,
+              selectizeInput(
+                ns("filter_species"),
+                "Crop Species",
+                choices = NULL,
+                multiple = TRUE
+              ),
+              selectizeInput(
+                ns("filter_location"),
+                "Storage Location",
+                choices = NULL,
+                multiple = TRUE
+              ),
+              selectizeInput(
+                ns("filter_status"),
+                "Seed Status",
+                choices = NULL,
+                multiple = TRUE
+              ),
+              numericInput(
+                ns("filter_low_stock_threshold"),
+                "Filter by Max Quantity (g)",
+                value = NA,
+                min = 0
+              )
             )
           )
         ),
-        
+
         # Main Inventory Table
         bslib::card(
           class = "shadow-sm border-0",
-          bslib::card_header(tagList(bsicons::bs_icon("table"), " Live Vault Balances")),
+          bslib::card_header(tagList(
+            bsicons::bs_icon("table"),
+            " Live Vault Balances"
+          )),
           bslib::card_body(DT::DTOutput(ns("inventory_table")))
         )
       ),
-      
-      # TAB 2: REGISTER SEED LOT
-      bslib::nav_panel("Register Seed Lot",
-        bslib::card(
-          class = "shadow-sm border-0",
-          bslib::card_header(tagList(bsicons::bs_icon("box-seam"), " Register New Seed Lot")),
-          bslib::card_body(
-            p(class = "text-muted small mb-4", "Add a new physical seed lot to a storage location. The breeder's name above will be used for logging."),
-            h6("Core Information", class="text-primary fw-bold mt-4"),
-            bslib::layout_column_wrap(width = 1/3,
-              selectizeInput(ns("reg_accession"), "Select Accession (Required)", choices = NULL),
-              textInput(ns("reg_location"), "Storage Location (Required)", placeholder = "e.g., Cold Room A"),
-              textInput(ns("reg_container"), "Container", placeholder = "e.g., Bottle 2")
-            ),
-            h6("Quantity & Condition", class="text-primary fw-bold mt-4"),
-            bslib::layout_column_wrap(width = 1/3,
-              numericInput(ns("reg_quantity"), "Quantity (Required)", value = 100, min = 0.1),
-              selectInput(ns("reg_unit"), "Unit", choices = c("g", "kg", "Seeds", "Packets"), selected = "g"),
-              selectInput(ns("reg_seed_status"), "Seed Status", choices = c("Available", "Reserved", "Testing", "Regeneration"), selected = "Available")
-            ),
-            h6("Provenance (Source)", class="text-primary fw-bold mt-4"),
-            bslib::layout_column_wrap(width = 1/3,
-              selectInput(ns("reg_source_type"), "Source Type", choices = c("", "Harvest", "Research Institution", "Gene Bank", "Farmer", "Purchase", "Donation", "Exchange", "Regeneration", "Unknown")),
-              textInput(ns("reg_source_reference"), "Source Reference", placeholder = "e.g., 2026 Bird Trial, ICRISAT"),
-              textInput(ns("reg_deposit_reason"), "Reason for Deposit", placeholder = "e.g., Post Harvest, Backup")
-            ),
-            h6("Quality & Storage", class="text-primary fw-bold mt-4"),
-            bslib::layout_column_wrap(width = 1/3,
-              numericInput(ns("reg_viability"), "Viability (%)", value = NA, min = 0, max = 100),
-              numericInput(ns("reg_moisture"), "Moisture (%)", value = NA, min = 0, max = 100),
-              textInput(ns("reg_storage_condition"), "Storage Condition", placeholder = "e.g., 4°C, -20°C")
-            ),
-            h6("Dates & Remarks", class="text-primary fw-bold mt-4"),
-            bslib::layout_column_wrap(width = 1/2,
-              dateInput(ns("reg_deposit_date"), "Deposit Date"),
-              textAreaInput(ns("reg_remarks"), "Remarks", placeholder = "Any other notes about this lot...", width = "100%", rows = 2)
-            ),
-            hr(),
-            actionButton(ns("btn_register_lot"), "Register Seed Lot", class = "btn btn-success rounded-pill fw-bold float-end px-4")
-          )
-        )
-      ),
-      
+
       # TAB 3: WITHDRAW SEED
-      bslib::nav_panel("Withdraw Seed",
+      bslib::nav_panel(
+        "Withdraw Seed",
         bslib::card(
           class = "shadow-sm border-0",
-          bslib::card_header(class = "text-danger", tagList(bsicons::bs_icon("box-arrow-up-right"), " Withdraw Seed")),
+          bslib::card_header(
+            class = "text-danger",
+            tagList(bsicons::bs_icon("box-arrow-up-right"), " Withdraw Seed")
+          ),
           bslib::card_body(
-            p(class = "text-muted small mb-4", "Remove seeds from the cold room for planting, sharing, or testing. The breeder's name above will be used for logging."),
-            h6("Step 1: Select Accession", class="fw-bold"),
-            selectizeInput(ns("w_accession"), NULL, choices = NULL, width = "100%"),
-            
-            h6("Step 2: Select Seed Lot", class="fw-bold mt-4"),
-            selectizeInput(ns("w_inventory_id"), NULL, choices = NULL, width = "100%"),
-            uiOutput(ns("w_lot_details_ui")),
-            
-            h6("Step 3: Specify Withdrawal Details", class="fw-bold mt-4"),
-            bslib::layout_column_wrap(width = 1/2,
-              numericInput(ns("w_amount"), "Amount to Withdraw", value = 10, min = 0.1, width = "100%"),
-              selectInput(ns("w_unit"), "Unit", choices = c("grams", "kg"), selected = "grams", width = "100%")
+            p(
+              class = "text-muted small mb-4",
+              "Remove seeds from the cold room for planting, sharing, or testing. The breeder's name above will be used for logging."
             ),
-            selectInput(ns("w_reason"), "Purpose of Withdrawal", 
-                        choices = c("", "Planting Trial", "Seed Multiplication", "DNA Extraction", "Germination Test", "Distribution", "Student Research", "Other"),
-                        width = "100%"),
-            textAreaInput(ns("w_remarks"), "Remarks (Optional)", placeholder = "e.g., For 2027 PYT", width = "100%"),
-            
+            h6("Step 1: Select Accession", class = "fw-bold"),
+            selectizeInput(
+              ns("w_accession"),
+              NULL,
+              choices = NULL,
+              width = "100%"
+            ),
+
+            h6("Step 2: Select Seed Lot", class = "fw-bold mt-4"),
+            selectizeInput(
+              ns("w_inventory_id"),
+              NULL,
+              choices = NULL,
+              width = "100%"
+            ),
+            uiOutput(ns("w_lot_details_ui")),
+
+            h6("Step 3: Specify Withdrawal Details", class = "fw-bold mt-4"),
+            bslib::layout_column_wrap(
+              width = 1 / 2,
+              numericInput(
+                ns("w_amount"),
+                "Amount to Withdraw",
+                value = 10,
+                min = 0.1,
+                width = "100%"
+              ),
+              selectInput(
+                ns("w_unit"),
+                "Unit",
+                choices = c("grams", "kg"),
+                selected = "grams",
+                width = "100%"
+              )
+            ),
+            selectizeInput(
+              ns("w_reason"),
+              "Purpose of Withdrawal (Select or Create)",
+              choices = c(
+                "",
+                "Planting Trial",
+                "Seed Multiplication",
+                "DNA Extraction",
+                "Germination Test",
+                "Distribution",
+                "Student Research",
+                "Other"
+              ),
+              options = list(create = TRUE),
+              width = "100%"
+            ),
+            textAreaInput(
+              ns("w_remarks"),
+              "Remarks (Optional)",
+              placeholder = "e.g., For 2027 PYT",
+              width = "100%"
+            ),
+
             uiOutput(ns("w_summary_ui")),
-            
+
             hr(),
-            actionButton(ns("btn_withdraw"), "Execute Withdrawal", class = "btn btn-danger rounded-pill fw-bold w-100")
+            actionButton(
+              ns("btn_withdraw"),
+              "Execute Withdrawal",
+              class = "btn btn-danger rounded-pill fw-bold w-100"
+            )
           )
         )
       ),
-      
+
       # TAB 4: INVENTORY HISTORY
-      bslib::nav_panel("Inventory History",
+      bslib::nav_panel(
+        "Inventory History",
         bslib::card(
           class = "shadow-sm border-0",
-          bslib::card_header(tagList(bsicons::bs_icon("clock-history"), " Lot Movement History")),
+          bslib::card_header(tagList(
+            bsicons::bs_icon("clock-history"),
+            " Lot Movement History"
+          )),
           bslib::card_body(
-            p(class = "text-muted small mb-4", "Track all deposits, withdrawals, and adjustments for every seed lot."),
+            p(
+              class = "text-muted small mb-4",
+              "Track all deposits, withdrawals, and adjustments for every seed lot."
+            ),
             DT::DTOutput(ns("history_table"))
           )
         )
@@ -314,10 +495,28 @@ mod_transaction_log_server <- function(id, db_state) {
     }, ignoreInit = TRUE)
 
     observeEvent(input$w_inventory_id, {
-      req(input$w_inventory_id)
+      # If input is empty or NULL, clear the selection and stop.
+      if (is.null(input$w_inventory_id) || input$w_inventory_id == "") {
+        w_selected_lot(NULL)
+        return()
+      }
+      
       lot_id <- as.integer(input$w_inventory_id)
-      lot_data <- full_inventory_data()[full_inventory_data()$inventory_id == lot_id, ]
-      w_selected_lot(lot_data)
+      
+      # Ensure we only proceed with a valid, non-NA lot_id
+      if (is.na(lot_id)) {
+        w_selected_lot(NULL)
+        return()
+      }
+      
+      lot_data <- full_inventory_data()[which(full_inventory_data()$inventory_id == lot_id), ]
+      
+      # Only set the reactive value if exactly one row is found
+      if (nrow(lot_data) == 1) {
+        w_selected_lot(lot_data)
+      } else {
+        w_selected_lot(NULL)
+      }
     })
 
     output$w_lot_details_ui <- renderUI({

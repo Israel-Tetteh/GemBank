@@ -80,12 +80,27 @@ app_server <- function(input, output, session) {
   # Initialize the server logic for the inventory ledger module.
   mod_transaction_log_server("inventory_panel", db_state)
 
+  # --- Cross-Module Communication Setup ---
+  # Create a reactive value to allow other modules to trigger a search in the passport explorer.
+  passport_search_term <- reactiveVal()
+
   # Initialize the server logic for the passport explorer module.
-  mod_passport_explorer_server("passport_explorer", db_state)
+  mod_passport_explorer_server("passport_explorer", db_state, passport_search_term)
 
   # Initialize the server logic for the species explorer module.
-  mod_species_explorer_server("species_explorer", db_state)
+  # It returns a reactive that fires when an accession is clicked.
+  clicked_from_species <- mod_species_explorer_server("species_explorer", db_state)
 
+  # When an accession is clicked in the species explorer, update the passport search term
+  # and navigate the user to the passport explorer tab.
+  observeEvent(clicked_from_species(), {
+    req(clicked_from_species())
+    # Set the search term for the passport module
+    passport_search_term(clicked_from_species())
+    # Switch the user to the passport explorer tab
+    bslib::nav_select("main_tabs", selected = "passport_explorer_tab")
+  })
+  
   # Initialize the server logic for the germplasm query module.
   mod_germplasm_query_server("germplasm_query_1", db_state)
 
@@ -94,6 +109,9 @@ app_server <- function(input, output, session) {
 
   # Initialize the server logic for the trial query module.
   mod_trial_query_server("trial_query_1", db_state)
+
+  # Initialize the server logic for the plot query module.
+  mod_plot_query_server("plot_query_1", db_state)
 
   # Render the disconnect button conditionally in the sidebar
   output$disconnect_button_ui <- renderUI({

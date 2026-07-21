@@ -30,40 +30,32 @@ mod_trial_query_ui <- function(id) {
         "Filter Criteria"
       ),
       bslib::card_body(
-        # Row 1
         div(
           class = "mb-3",
           bslib::layout_columns(
             col_widths = c(4, 4, 4),
-            textInput(
-              ns("filter_text"),
-              "Trial Name or Code (contains)",
-              placeholder = "e.g., BDT-2026"
-            ),
+            selectizeInput(ns("filter_trial"), "Trial Name", choices = NULL),
             selectizeInput(ns("filter_year"), "Year", choices = NULL),
             selectizeInput(ns("filter_season"), "Season", choices = NULL)
           )
         ),
-        # Row 2
-        div(
-          bslib::layout_columns(
-            col_widths = c(4, 4, 4),
-            selectizeInput(ns("filter_status"), "Trial Status", choices = NULL),
-            selectizeInput(ns("filter_type"), "Trial Type", choices = NULL),
-            selectizeInput(
-              ns("filter_pi"),
-              "Principal Investigator",
-              choices = NULL
-            )
+        bslib::layout_columns(
+          col_widths = c(4, 4, 4),
+          selectizeInput(ns("filter_status"), "Trial Status", choices = NULL),
+          selectizeInput(ns("filter_type"), "Trial Type", choices = NULL),
+          selectizeInput(
+            ns("filter_pi"),
+            "Principal Investigator",
+            choices = NULL
           )
         ),
         div(
-          class = "d-flex justify-content-end bg-white",
+          class = "d-flex justify-content-end mt-3",
           actionButton(
             ns("btn_query"),
             "Run Query",
             icon = bs_icon("search"),
-            class = "btn-info rounded-pill fw-bold px-4"
+            class = "btn-primary rounded-pill fw-bold px-4"
           )
         )
       )
@@ -87,31 +79,77 @@ mod_trial_query_ui <- function(id) {
 mod_trial_query_server <- function(id, db_state) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    
+
     # Populate filter dropdowns on load
-    observeEvent(db_state$path, {
-      req(db_state$path)
-      tryCatch({
-        updateSelectizeInput(session, "filter_year", choices = c("All", get_all_trial_years(db_state$path)), server = TRUE)
-        updateSelectizeInput(session, "filter_season", choices = c("All", get_all_trial_seasons(db_state$path)), server = TRUE)
-        updateSelectizeInput(session, "filter_status", choices = c("All", get_all_trial_statuses(db_state$path)), server = TRUE)
-        updateSelectizeInput(session, "filter_type", choices = c("All", get_all_trial_types(db_state$path)), server = TRUE)
-        updateSelectizeInput(session, "filter_pi", choices = c("All", get_all_principal_investigators(db_state$path)), server = TRUE)
-      }, error = function(e) {
-        # Fail silently if DB is empty
-      })
-    }, ignoreNULL = TRUE)
-    
+    observeEvent(
+      db_state$path,
+      {
+        req(db_state$path)
+        tryCatch(
+          {
+            updateSelectizeInput(
+              session,
+              "filter_trial",
+              choices = c("All", get_all_trials(db_state$path)),
+              server = TRUE
+            )
+            updateSelectizeInput(
+              session,
+              "filter_year",
+              choices = c("All", get_all_trial_years(db_state$path)),
+              server = TRUE
+            )
+            updateSelectizeInput(
+              session,
+              "filter_season",
+              choices = c("All", get_all_trial_seasons(db_state$path)),
+              server = TRUE
+            )
+            updateSelectizeInput(
+              session,
+              "filter_status",
+              choices = c("All", get_all_trial_statuses(db_state$path)),
+              server = TRUE
+            )
+            updateSelectizeInput(
+              session,
+              "filter_type",
+              choices = c("All", get_all_trial_types(db_state$path)),
+              server = TRUE
+            )
+            updateSelectizeInput(
+              session,
+              "filter_pi",
+              choices = c(
+                "All",
+                get_all_principal_investigators(db_state$path)
+              ),
+              server = TRUE
+            )
+          },
+          error = function(e) {
+            # Fail silently if DB is empty
+          }
+        )
+      },
+      ignoreNULL = TRUE
+    )
+
     # Reactive to store query results, triggered by the button
     query_results <- eventReactive(input$btn_query, {
       req(db_state$path)
-      
-      id <- showNotification("Running query...", duration = NULL, closeButton = FALSE, type = "message")
+
+      id <- showNotification(
+        "Running query...",
+        duration = NULL,
+        closeButton = FALSE,
+        type = "message"
+      )
       on.exit(removeNotification(id), add = TRUE)
-      
+
       search_trials(
         db_path = db_state$path,
-        search_text = input$filter_text,
+        target_trial = input$filter_trial,
         trial_year = input$filter_year,
         trial_season = input$filter_season,
         t_status = input$filter_status,
@@ -119,12 +157,12 @@ mod_trial_query_server <- function(id, db_state) {
         pi_name = input$filter_pi
       )
     })
-    
+
     # Render the results table
     output$results_table <- DT::renderDT({
       df <- query_results()
       req(df)
-      
+
       DT::datatable(
         df,
         extensions = 'Buttons',
@@ -138,6 +176,5 @@ mod_trial_query_server <- function(id, db_state) {
         class = 'cell-border stripe hover'
       )
     })
-    
   })
 }

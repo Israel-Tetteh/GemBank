@@ -162,7 +162,10 @@ mod_data_entry_ui <- function(id) {
           bslib::layout_column_wrap(width = 1/3,
             textInput(ns("t_name"), "Trial Name (Required, Unique)", placeholder = "e.g., 2026 Bird Damage Trial"),
             textInput(ns("t_code"), "Trial Code (Unique)", placeholder = "e.g., BDT-2026"),
-            selectInput(ns("t_type"), "Trial Type", choices = c("", "Yield Trial", "Disease Screening", "Nursery", "Seed Multiplication", "Observation Trial", "Stress Screening", "Hybrid Evaluation", "Advanced Yield Trial", "Multi-location Trial", "Quality Evaluation", "Other"))
+            selectizeInput(ns("t_type"), "Trial Type (Select or Create)", 
+                         choices = c("", "Yield Trial", "Disease Screening", "Nursery", "Seed Multiplication", "Observation Trial", "Stress Screening", "Hybrid Evaluation", "Advanced Yield Trial", "Multi-location Trial", "Quality Evaluation", "Other"),
+                         options = list(create = TRUE)
+            )
           ),
           
           h6("Objective & Location", class="text-primary fw-bold mt-4"),

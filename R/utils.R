@@ -318,6 +318,33 @@ clear_db <- function(db_path = "data/breeding_db.sqlite") {
   message("All data has been successfully deleted from the database.")
 }
 
+#' Sanitize Text Input for Database
+#' @description A robust helper to clean character inputs before DB insertion.
+#' It handles NULL, NA, empty strings, and ensures a single value is returned.
+#' @param text The input character vector.
+#' @param case The desired case ('none', 'upper', 'lower').
+#' @return A single character string or NULL.
+#' @noRd
+sanitize_text_input <- function(text, case = c("none", "lower", "upper")) {
+  case <- match.arg(case)
+  
+  if (is.null(text) || length(text) == 0) return(NULL)
+
+  # Ensure we are working with a single character string
+  text <- as.character(text)[1]
+
+  if (is.na(text)) return(NULL)
+
+  text <- trimws(text)
+
+  if (identical(text, "")) return(NULL)
+
+  switch(case,
+         lower = tolower(text),
+         upper = toupper(text),
+         none  = text)
+}
+
 
 ################################################################################
 #     DATA ENTRY & INSERTS
@@ -371,13 +398,11 @@ add_germplasm <- function(
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
 
-  # Helper to clean strings, returning NULL if input is empty/NULL
-  clean_text <- function(text, case = "lower") {
-    if (is.null(text) || trimws(text) == "") return(NULL)
-    if (case == "upper") {
-      return(toupper(trimws(text)))
-    }
-    tolower(trimws(text))
+  # Safely handle date input which might be NULL, NA, or empty
+  date_value <- if (is.null(acquisition_date) || length(acquisition_date) == 0 || all(is.na(acquisition_date))) {
+    NULL
+  } else {
+    as.character(acquisition_date)
   }
 
   query <- "INSERT INTO germplasm (
@@ -388,21 +413,21 @@ add_germplasm <- function(
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
   params <- list(
-    clean_text(accession_name, case = "upper"),
-    clean_text(preferred_name),
-    clean_text(species),
-    clean_text(pedigree),
-    clean_text(biological_status),
-    clean_text(accession_type),
-    clean_text(seed_source),
-    clean_text(source_name),
-    clean_text(country_of_origin),
-    clean_text(collection_site),
-    clean_text(collector_name),
-    if (is.null(acquisition_date) || acquisition_date == "") NULL else as.character(acquisition_date),
-    clean_text(generation),
-    clean_text(status),
-    clean_text(remarks)
+    sanitize_text_input(accession_name, case = "upper"),
+    sanitize_text_input(preferred_name),
+    sanitize_text_input(species),
+    sanitize_text_input(pedigree),
+    sanitize_text_input(biological_status),
+    sanitize_text_input(accession_type),
+    sanitize_text_input(seed_source),
+    sanitize_text_input(source_name),
+    sanitize_text_input(country_of_origin),
+    sanitize_text_input(collection_site),
+    sanitize_text_input(collector_name),
+    date_value,
+    sanitize_text_input(generation),
+    sanitize_text_input(status),
+    sanitize_text_input(remarks)
   )
 
   tryCatch({
@@ -410,11 +435,11 @@ add_germplasm <- function(
       
       # Log action
       record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
-      details <- sprintf("Created new germplasm: %s", clean_text(accession_name, case = "upper"))
+      details <- sprintf("Created new germplasm: %s", sanitize_text_input(accession_name, case = "upper"))
       DBI::dbExecute(
         con,
         "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
-        params = list("germplasm", record_id, "INSERT", clean_text(user_name), details)
+        params = list("germplasm", record_id, "INSERT", sanitize_text_input(user_name), details)
       )
 
       message(sprintf("Successfully added germplasm: '%s'", accession_name))
@@ -463,20 +488,14 @@ add_trait <- function(db_path = "data/breeding_db.sqlite",
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
 
-  # Helper to clean text inputs
-  clean_text <- function(text) {
-    if (is.null(text) || trimws(text) == "") return(NULL)
-    trimws(text)
-  }
-
   query <- "INSERT INTO traits (trait_name, trait_description, unit, data_type, remarks) VALUES (?, ?, ?, ?, ?)"
   
   params <- list(
-    tolower(clean_text(trait_name)),
-    clean_text(trait_description),
-    clean_text(unit),
-    clean_text(data_type),
-    clean_text(remarks)
+    sanitize_text_input(trait_name, case = "lower"),
+    sanitize_text_input(trait_description),
+    sanitize_text_input(unit),
+    sanitize_text_input(data_type),
+    sanitize_text_input(remarks)
   )
 
   tryCatch({
@@ -484,11 +503,11 @@ add_trait <- function(db_path = "data/breeding_db.sqlite",
     
     # Log action
     record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
-    details <- sprintf("Created new trait: %s", tolower(clean_text(trait_name)))
+    details <- sprintf("Created new trait: %s", sanitize_text_input(trait_name, case = "lower"))
     DBI::dbExecute(
       con,
       "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
-      params = list("traits", record_id, "INSERT", clean_text(user_name), details)
+      params = list("traits", record_id, "INSERT", sanitize_text_input(user_name), details)
     )
 
     message(sprintf("Successfully added trait: '%s'", trait_name))
@@ -552,17 +571,10 @@ add_trial <- function(db_path = "data/breeding_db.sqlite",
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con))
 
-  # Helper to clean text inputs
-  clean_text <- function(text) {
-    if (is.null(text) || trimws(text) == "") return(NULL)
-    trimws(text)
-  }
-
-  # Helper for dates
-  clean_date <- function(date) {
-    if (is.null(date) || date == "") return(NULL)
-    as.character(date)
-  }
+  # Safely handle date inputs
+  p_date <- if (is.null(planting_date) || length(planting_date) == 0 || all(is.na(planting_date))) NULL else as.character(planting_date)
+  e_date <- if (is.null(expected_harvest_date) || length(expected_harvest_date) == 0 || all(is.na(expected_harvest_date))) NULL else as.character(expected_harvest_date)
+  a_date <- if (is.null(actual_harvest_date) || length(actual_harvest_date) == 0 || all(is.na(actual_harvest_date))) NULL else as.character(actual_harvest_date)
 
   query <- "
     INSERT INTO trials (
@@ -573,24 +585,24 @@ add_trial <- function(db_path = "data/breeding_db.sqlite",
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
   params <- list(
-    clean_text(trial_name),
-    clean_text(trial_code),
-    clean_text(trial_type),
-    clean_text(objective),
-    clean_text(location),
+    sanitize_text_input(trial_name),
+    sanitize_text_input(trial_code),
+    sanitize_text_input(trial_type),
+    sanitize_text_input(objective),
+    sanitize_text_input(location),
     latitude,
     longitude,
-    clean_text(season),
+    sanitize_text_input(season),
     year,
-    clean_text(experimental_design),
+    sanitize_text_input(experimental_design),
     number_of_replications,
-    clean_text(principal_investigator),
-    clean_text(project_name),
-    clean_date(planting_date),
-    clean_date(expected_harvest_date),
-    clean_date(actual_harvest_date),
-    clean_text(trial_status),
-    clean_text(remarks)
+    sanitize_text_input(principal_investigator),
+    sanitize_text_input(project_name),
+    p_date,
+    e_date,
+    a_date,
+    sanitize_text_input(trial_status),
+    sanitize_text_input(remarks)
   )
 
   tryCatch({
@@ -598,11 +610,11 @@ add_trial <- function(db_path = "data/breeding_db.sqlite",
     
     # Log action
     record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
-    details <- sprintf("Created new trial: %s", clean_text(trial_name))
+    details <- sprintf("Created new trial: %s", sanitize_text_input(trial_name))
     DBI::dbExecute(
       con,
       "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
-      params = list("trials", record_id, "INSERT", clean_text(user_name), details)
+      params = list("trials", record_id, "INSERT", sanitize_text_input(user_name), details)
     )
 
     message(sprintf("Successfully added trial: '%s'", trial_name))
@@ -687,7 +699,7 @@ add_plot <- function(
   DBI::dbExecute(
     con,
     query,
-    params = list(trial_id, germplasm_id, plot_number, replication, block, row, column, remarks)
+    params = list(trial_id, germplasm_id, plot_number, replication, block, row, column, sanitize_text_input(remarks))
   )
   
   # Log action
@@ -696,7 +708,7 @@ add_plot <- function(
   DBI::dbExecute(
     con,
     "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
-    params = list("plots", record_id, "INSERT", user_name, details)
+    params = list("plots", record_id, "INSERT", sanitize_text_input(user_name), details)
   )
 
   invisible(TRUE)
@@ -781,18 +793,12 @@ add_observation <- function(
       params = list(plot_id, trait_id)
     )
 
-    # Helper to clean text inputs
-    clean_text <- function(text) {
-      if (is.null(text) || trimws(text) == "") return(NULL)
-      trimws(text)
-    }
-
     if (nrow(check_obs) == 0) {
       # Insert new record
       DBI::dbExecute(
         con,
         "INSERT INTO observations (plot_id, trait_id, observation_value, remarks) VALUES (?, ?, ?, ?)",
-        params = list(plot_id, trait_id, clean_text(value), clean_text(remarks))
+        params = list(plot_id, trait_id, sanitize_text_input(value), sanitize_text_input(remarks))
       )
       action <- "INSERT"
       record_id <- DBI::dbGetQuery(con, "SELECT last_insert_rowid();")[[1]]
@@ -801,7 +807,7 @@ add_observation <- function(
       DBI::dbExecute(
         con,
         "UPDATE observations SET observation_value = ?, remarks = ? WHERE plot_id = ? AND trait_id = ?",
-        params = list(clean_text(value), clean_text(remarks), plot_id, trait_id)
+        params = list(sanitize_text_input(value), sanitize_text_input(remarks), plot_id, trait_id)
       )
       action <- "UPDATE"
       record_id <- check_obs$observation_id[1]
@@ -818,7 +824,7 @@ add_observation <- function(
     DBI::dbExecute(
       con,
       "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
-      params = list("observations", record_id, action, tolower(trimws(user_name)), details)
+      params = list("observations", record_id, action, sanitize_text_input(user_name, case = "lower"), details)
     )
   })
 
@@ -881,14 +887,8 @@ add_inventory_deposit <- function(db_path = "data/breeding_db.sqlite",
     stop("Viability must be between 0 and 100.")
   }
 
-  # Helper to clean text inputs
-  clean_text <- function(text) {
-    if (is.null(text) || trimws(text) == "") return(NULL)
-    trimws(text)
-  }
+  accession_name_clean <- sanitize_text_input(accession_name, case = "upper")
 
-  accession_name_clean <- toupper(clean_text(accession_name))
-  
   # Get germplasm ID
   g_res <- DBI::dbGetQuery(
     con,
@@ -910,18 +910,18 @@ add_inventory_deposit <- function(db_path = "data/breeding_db.sqlite",
     params <- list(
       germplasm_id,
       quantity,
-      clean_text(unit),
-      clean_text(storage_location),
-      clean_text(container),
-      clean_text(source_type),
-      clean_text(source_reference),
-      clean_text(deposit_reason),
-      clean_text(seed_status),
+      sanitize_text_input(unit),
+      sanitize_text_input(storage_location),
+      sanitize_text_input(container),
+      sanitize_text_input(source_type),
+      sanitize_text_input(source_reference),
+      sanitize_text_input(deposit_reason),
+      sanitize_text_input(seed_status),
       viability_percent,
       moisture_percent,
-      clean_text(storage_condition),
+      sanitize_text_input(storage_condition),
       as.character(deposit_date),
-      clean_text(remarks)
+      sanitize_text_input(remarks)
     )
 
     DBI::dbExecute(con, insert_query, params = params)
@@ -937,14 +937,14 @@ add_inventory_deposit <- function(db_path = "data/breeding_db.sqlite",
       quantity_changed = quantity,
       quantity_after = quantity,
       unit = unit,
-      reason = clean_text(deposit_reason)
+      reason = sanitize_text_input(deposit_reason)
     )
     details_json <- jsonlite::toJSON(details_list, auto_unbox = TRUE)
     
     DBI::dbExecute(
       con,
       "INSERT INTO audit_log (table_name, record_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)",
-      params = list("inventory", record_id, "INSERT", clean_text(user_name), details_json)
+      params = list("inventory", record_id, "INSERT", sanitize_text_input(user_name), details_json)
     )
   })
   
@@ -973,12 +973,12 @@ update_germplasm <- function(db_path, accession_name, updates, user_name) {
   on.exit(DBI::dbDisconnect(con))
 
   # Clean inputs
-  accession_name_clean <- toupper(trimws(accession_name))
-  user_name_clean <- tolower(trimws(user_name))
+  accession_name_clean <- sanitize_text_input(accession_name, case = "upper")
+  user_name_clean <- sanitize_text_input(user_name, case = "lower")
 
-  # Clean the update values and remove any empty ones
-  updates_clean <- lapply(updates, function(x) if (is.character(x)) trimws(x) else x)
-  updates_clean <- updates_clean[sapply(updates_clean, function(x) !is.null(x) && x != "")]
+  # Sanitize each value in the updates list and remove any empty/invalid ones
+  updates_clean <- lapply(updates, sanitize_text_input)
+  updates_clean <- updates_clean[!sapply(updates_clean, is.null)]
 
   if (length(updates_clean) == 0) {
     message("No updates to perform.")
@@ -1231,7 +1231,14 @@ get_inventory_history <- function(db_path) {
   
   # Parse the JSON details column
   history_list <- lapply(audit_data$details, function(json_str) {
-    tryCatch(jsonlite::fromJSON(json_str), error = function(e) NULL)
+    tryCatch({
+      df <- jsonlite::fromJSON(json_str)
+      # Ensure lot_id is integer to prevent bind_rows errors
+      if ("lot_id" %in% names(df)) {
+        df$lot_id <- as.integer(df$lot_id)
+      }
+      df
+    }, error = function(e) NULL)
   })
   
   # Filter out any parsing errors and bind into a data frame
@@ -1898,9 +1905,8 @@ withdraw_seed <- function(db_path = "data/breeding_db.sqlite",
 
   # --- Validation & Setup ---
   if (withdraw_amount <= 0) stop("Withdrawal amount must be positive.")
-  user_name_clean <- trimws(user_name)
-  reason_clean <- trimws(reason)
-  unit_lower <- tolower(trimws(withdraw_unit))
+  user_name_clean <- sanitize_text_input(user_name)
+  unit_lower <- sanitize_text_input(withdraw_unit, case = "lower")
 
   # Convert withdrawal amount to grams for consistent comparison
   amount_in_grams <- if (unit_lower %in% c("kg", "kilogram", "kilograms")) {
@@ -1955,7 +1961,7 @@ withdraw_seed <- function(db_path = "data/breeding_db.sqlite",
       quantity_changed = -amount_in_grams,
       quantity_after = current_stock$quantity - amount_in_grams,
       unit = "g", # Standardized to grams
-      reason = clean_text(reason)
+      reason = sanitize_text_input(reason) # Re-sanitize here to be safe
     )
     details_json <- jsonlite::toJSON(details_list, auto_unbox = TRUE)
     
@@ -2016,9 +2022,9 @@ search_germplasm <- function(
   params <- list()
   
   # Dynamically append filters if the user selected them
-  if (!is.null(target_accession) && target_accession != "") {
-    query <- paste0(query, " AND accession_name LIKE ?")
-    params <- append(params, paste0("%", toupper(trimws(target_accession)), "%"))
+  if (!is.null(target_accession) && target_accession != "All" && target_accession != "") {
+    query <- paste0(query, " AND accession_name = ?")
+    params <- append(params, toupper(trimws(target_accession)))
   }
   
   if (bio_status != "All") {
@@ -2057,8 +2063,8 @@ search_germplasm <- function(
 #' @export
 search_plots <- function(
   db_path = "data/breeding_db.sqlite",
-  search_trial = NULL,
-  search_acc = NULL,
+  target_trial = NULL,
+  target_accession = NULL,
   rep_num = "All"
 ) {
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
@@ -2084,14 +2090,14 @@ search_plots <- function(
   params <- list()
   
   # Dynamically append filters
-  if (!is.null(search_trial) && search_trial != "") {
-    query <- paste0(query, " AND tr.trial_name LIKE ?")
-    params <- append(params, paste0("%", trimws(search_trial), "%"))
+  if (!is.null(target_trial) && target_trial != "All" && target_trial != "") {
+    query <- paste0(query, " AND tr.trial_name = ?")
+    params <- append(params, trimws(target_trial))
   }
   
-  if (!is.null(search_acc) && search_acc != "") {
-    query <- paste0(query, " AND g.accession_name LIKE ?")
-    params <- append(params, paste0("%", toupper(trimws(search_acc)), "%"))
+  if (!is.null(target_accession) && target_accession != "All" && target_accession != "") {
+    query <- paste0(query, " AND g.accession_name = ?")
+    params <- append(params, toupper(trimws(target_accession)))
   }
   
   if (rep_num != "All") {
@@ -2227,9 +2233,9 @@ search_inventory <- function(
   params <- list()
   
   # Dynamically append filters
-  if (!is.null(target_accession) && target_accession != "") {
-    query <- paste0(query, " AND g.accession_name LIKE ?")
-    params <- append(params, paste0("%", toupper(trimws(target_accession)), "%"))
+  if (!is.null(target_accession) && target_accession != "All" && target_accession != "") {
+    query <- paste0(query, " AND g.accession_name = ?")
+    params <- append(params, toupper(trimws(target_accession)))
   }
   
   if (storage_loc != "All") {

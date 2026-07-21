@@ -30,17 +30,14 @@ mod_germplasm_query_ui <- function(id) {
         "Filter Criteria"
       ),
       bslib::card_body(
-        class = "p-4",
-        # By wrapping layout_columns in divs and using Bootstrap's margin utility (mb-3),
-        # we create distinct vertical spacing between filter rows, preventing overlap.
         div(
           class = "mb-3",
           bslib::layout_columns(
             col_widths = c(4, 4, 4),
-            textInput(
+            selectizeInput(
               ns("filter_accession"),
-              "Accession Name (contains)",
-              placeholder = "e.g., SC-2026"
+              "Accession Name",
+              choices = NULL
             ),
             selectizeInput(
               ns("filter_bio_status"),
@@ -54,24 +51,22 @@ mod_germplasm_query_ui <- function(id) {
             )
           )
         ),
-        div(
-          bslib::layout_columns(
-            col_widths = c(6, 6),
-            selectizeInput(ns("filter_source"), "Seed Source", choices = NULL),
-            selectizeInput(
-              ns("filter_country"),
-              "Country of Origin",
-              choices = NULL
-            )
+        bslib::layout_columns(
+          col_widths = c(6, 6),
+          selectizeInput(ns("filter_source"), "Seed Source", choices = NULL),
+          selectizeInput(
+            ns("filter_country"),
+            "Country of Origin",
+            choices = NULL
           )
         ),
         div(
-          class = "d-flex justify-content-end bg-white",
+          class = "d-flex justify-content-end mt-3",
           actionButton(
             ns("btn_query"),
             "Run Query",
             icon = bs_icon("search"),
-            class = "btn-info rounded-pill fw-bold px-4"
+            class = "btn-primary rounded-pill fw-bold px-4"
           )
         )
       )
@@ -95,28 +90,66 @@ mod_germplasm_query_ui <- function(id) {
 mod_germplasm_query_server <- function(id, db_state) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    
+
     # Populate filter dropdowns on load
-    observeEvent(db_state$path, {
-      req(db_state$path)
-      tryCatch({
-        updateSelectizeInput(session, "filter_bio_status", choices = c("All", get_all_biological_statuses(db_state$path)), server = TRUE)
-        updateSelectizeInput(session, "filter_acc_type", choices = c("All", get_all_accession_types(db_state$path)), server = TRUE)
-        updateSelectizeInput(session, "filter_source", choices = c("All", get_all_seed_sources(db_state$path)), server = TRUE)
-        updateSelectizeInput(session, "filter_country", choices = c("All", get_all_countries_of_origin(db_state$path)), server = TRUE)
-      }, error = function(e) {
-        # Fail silently if DB is empty
-      })
-    }, ignoreNULL = TRUE)
-    
+    observeEvent(
+      db_state$path,
+      {
+        req(db_state$path)
+        tryCatch(
+          {
+            updateSelectizeInput(
+              session,
+              "filter_accession",
+              choices = c("All", get_all_accessions(db_state$path)),
+              server = TRUE
+            )
+            updateSelectizeInput(
+              session,
+              "filter_bio_status",
+              choices = c("All", get_all_biological_statuses(db_state$path)),
+              server = TRUE
+            )
+            updateSelectizeInput(
+              session,
+              "filter_acc_type",
+              choices = c("All", get_all_accession_types(db_state$path)),
+              server = TRUE
+            )
+            updateSelectizeInput(
+              session,
+              "filter_source",
+              choices = c("All", get_all_seed_sources(db_state$path)),
+              server = TRUE
+            )
+            updateSelectizeInput(
+              session,
+              "filter_country",
+              choices = c("All", get_all_countries_of_origin(db_state$path)),
+              server = TRUE
+            )
+          },
+          error = function(e) {
+            # Fail silently if DB is empty
+          }
+        )
+      },
+      ignoreNULL = TRUE
+    )
+
     # Reactive to store query results, triggered by the button
     query_results <- eventReactive(input$btn_query, {
       req(db_state$path)
-      
+
       # Show a loading notification while the query runs
-      id <- showNotification("Running query...", duration = NULL, closeButton = FALSE, type = "message")
+      id <- showNotification(
+        "Running query...",
+        duration = NULL,
+        closeButton = FALSE,
+        type = "message"
+      )
       on.exit(removeNotification(id), add = TRUE)
-      
+
       search_germplasm(
         db_path = db_state$path,
         target_accession = input$filter_accession,
@@ -126,12 +159,12 @@ mod_germplasm_query_server <- function(id, db_state) {
         origin_country = input$filter_country
       )
     })
-    
+
     # Render the results table
     output$results_table <- DT::renderDT({
       df <- query_results()
       req(df)
-      
+
       DT::datatable(
         df,
         extensions = 'Buttons',
@@ -145,6 +178,5 @@ mod_germplasm_query_server <- function(id, db_state) {
         class = 'cell-border stripe hover'
       )
     })
-    
   })
 }

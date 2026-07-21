@@ -23,34 +23,30 @@ mod_passport_explorer_ui <- function(id) {
     ),
 
     # Search Bar
-    bslib::card_body(
-      bslib::layout_columns(
-        col_widths = c(-1, 4, 5, 1, -1), # Perfectly scales across the dashboard
-
-        textInput(
-          ns("user_name"),
-          "Breeder's Name (for edits)",
-          value = "Israel Tetteh",
-          width = "100%"
-        ),
-
-        textInput(
-          ns("search_accession"),
-          "Enter Accession Name",
-          placeholder = "e.g., sc-2026-001",
-          width = "100%"
-        ),
-
-        # Flex wrapper pushes the button down to perfectly line up with the inputs
-        div(
-          class = "d-flex align-items-end",
-          style = "height: 100%;",
+    bslib::card(
+      class = "shadow-sm border-0 mb-4",
+      bslib::card_header("Search Accession"),
+      bslib::card_body(
+        bslib::layout_columns(
+          col_widths = c(4, 6, 2),
+          textInput(
+            ns("user_name"),
+            "Breeder's Name (for edits)",
+            value = "Israel Tetteh"
+          ),
+          textInput(
+            ns("search_accession"),
+            "Enter Accession Name",
+            placeholder = "e.g., sc-2026-001"
+          ),
+          div(
+            class = "d-flex align-items-end h-100",
           actionButton(
             ns("btn_search"),
             "Search",
             icon = bs_icon("search"),
-            class = "text-white w-100",
-            style = "background-color: #0F766E; border-color: #0F766E; height: 38px; font-weight: 500;"
+            class = "btn-primary w-100"
+          )
           )
         )
       )
@@ -64,8 +60,9 @@ mod_passport_explorer_ui <- function(id) {
 #' Passport Explorer Module Server
 #' @param id Module id
 #' @param db_state A `reactiveValues` object from `app_server` holding the database path.
+#' @param search_term A `reactiveVal` that can be set by other modules to trigger a search.
 #' @noRd
-mod_passport_explorer_server <- function(id, db_state) {
+mod_passport_explorer_server <- function(id, db_state, search_term = reactiveVal(NULL)) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -73,30 +70,51 @@ mod_passport_explorer_server <- function(id, db_state) {
     search_result <- reactiveVal(NULL)
     is_editing <- reactiveVal(FALSE)
 
-    # Trigger for search
-    observeEvent(input$btn_search, {
-      req(db_state$path, input$search_accession)
-      is_editing(FALSE) # Reset state for new search
-      accession <- toupper(trimws(input$search_accession))
-
+    # Helper function to fetch all data for a given accession
+    # This centralizes the data fetching logic and avoids code duplication
+    fetch_passport_data <- function(accession_name) {
+      req(db_state$path, accession_name)
+      accession <- toupper(trimws(accession_name))
+      
+      id <- showNotification(paste("Fetching data for", accession, "..."), duration = NULL, closeButton = FALSE, type = "message")
+      on.exit(removeNotification(id))
+      
       tryCatch({
         con <- DBI::dbConnect(RSQLite::SQLite(), db_state$path)
-        on.exit(DBI::dbDisconnect(con))
+        on.exit(DBI::dbDisconnect(con), add = TRUE)
         basic_info <- DBI::dbGetQuery(con, "SELECT * FROM germplasm WHERE accession_name = ?", params = list(accession))
-
+        
         if (nrow(basic_info) == 0) stop("Accession not found in the database.")
-
-        search_result(list(
+        
+        list(
           basic_info = basic_info,
           passport = get_germplasm_passport(db_state$path, accession),
           inventory = get_inventory_status(db_state$path, accession),
           raw_data = get_raw_accession_data(db_state$path, accession),
           audit_log = get_accession_audit_log(db_state$path, accession)
-        ))
+        )
       }, error = function(e) {
         shinyWidgets::show_alert("Error", e$message, type = "error")
-        search_result(NULL)
+        NULL # Return NULL on error
       })
+    }
+
+    # Trigger for search
+    observeEvent(input$btn_search, {
+      req(db_state$path, input$search_accession)
+      is_editing(FALSE) # Reset state for new search
+      search_result(fetch_passport_data(input$search_accession))
+    })
+    
+    # Observer to handle searches triggered from other modules
+    observeEvent(search_term(), {
+      req(search_term())
+      # Update the UI's text input so the user sees what's being searched
+      updateTextInput(session, "search_accession", value = search_term())
+      # Trigger the search logic
+      is_editing(FALSE)
+      search_result(fetch_passport_data(search_term()))
+      search_term(NULL) # Reset the trigger
     })
 
     # Dynamic UI for results
@@ -251,18 +269,9 @@ mod_passport_explorer_server <- function(id, db_state) {
         shinyWidgets::show_alert("Success", "Germplasm details updated successfully!", type = "success")
         is_editing(FALSE)
 
-        # Refresh data
-        accession <- toupper(trimws(input$search_accession))
-        con <- DBI::dbConnect(RSQLite::SQLite(), db_state$path)
-        on.exit(DBI::dbDisconnect(con))
-        basic_info <- DBI::dbGetQuery(con, "SELECT * FROM germplasm WHERE accession_name = ?", params = list(accession))
-        search_result(list(
-          basic_info = basic_info,
-          passport = get_germplasm_passport(db_state$path, accession),
-          inventory = get_inventory_status(db_state$path, accession),
-          raw_data = get_raw_accession_data(db_state$path, accession),
-          audit_log = get_accession_audit_log(db_state$path, accession)
-        ))
+        # Refresh data by calling the centralized helper function
+        search_result(fetch_passport_data(input$search_accession))
+
       }, error = function(e) {
         shinyWidgets::show_alert("Error", e$message, type = "error")
       })

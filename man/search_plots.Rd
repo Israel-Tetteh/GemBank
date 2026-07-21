@@ -6,19 +6,19 @@
 \usage{
 search_plots(
   db_path = "data/breeding_db.sqlite",
-  search_trial = NULL,
-  search_acc = NULL,
+  target_trial = NULL,
+  target_accession = NULL,
   rep_num = "All"
 )
 }
 \arguments{
 \item{db_path}{Path to the SQLite database.}
 
+\item{rep_num}{Replication number. Use "All" to skip.}
+
 \item{search_trial}{Free text search for Trial Name (optional).}
 
 \item{search_acc}{Free text search for Accession Name (optional).}
-
-\item{rep_num}{Replication number. Use "All" to skip.}
 }
 \value{
 A data frame of matching plot records.
