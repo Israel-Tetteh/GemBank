@@ -50,9 +50,10 @@ mod_species_explorer_ui <- function(id) {
 #' Species Explorer Module Server
 #' @param id Module id
 #' @param db_state A `reactiveValues` object from `app_server` holding the database path.
+#' @param global_refresh_trigger A reactiveVal to signal data changes.
 #' @return A `reactive` that triggers when an accession is clicked.
 #' @noRd
-mod_species_explorer_server <- function(id, db_state) {
+mod_species_explorer_server <- function(id, db_state, global_refresh_trigger) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -60,7 +61,7 @@ mod_species_explorer_server <- function(id, db_state) {
     clicked_accession <- reactiveVal()
     
     # Populate the species dropdown when the database is connected
-    observeEvent(db_state$path, {
+    observeEvent(list(db_state$path, global_refresh_trigger()), {
       req(db_state$path)
       species_list <- get_all_species(db_state$path)
       updateSelectizeInput(session, "species_selector", choices = species_list, server = TRUE)

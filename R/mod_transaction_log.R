@@ -332,16 +332,16 @@ mod_transaction_log_ui <- function(id) {
 #' Inventory Management Module Server
 #' @param id Module id
 #' @param db_state A `reactiveValues` object from `app_server` holding the database path.
+#' @param global_refresh_trigger A reactiveVal to signal data changes.
 #' @noRd
-mod_transaction_log_server <- function(id, db_state) {
+mod_transaction_log_server <- function(id, db_state, global_refresh_trigger) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    refresh_trigger <- reactiveVal(0)
     full_inventory_data <- reactiveVal(data.frame())
 
     # OBSERVE: Main data fetcher, depends on DB path and refresh trigger
-    observeEvent(list(db_state$path, refresh_trigger()), {
+    observeEvent(list(db_state$path, global_refresh_trigger()), {
       path <- db_state$path
       req(path)
       tryCatch({
@@ -386,8 +386,7 @@ mod_transaction_log_server <- function(id, db_state) {
 
     # REACTIVE: Summary statistics for the value boxes
     summary_stats <- reactive({
-      req(db_state$path)
-      refresh_trigger()
+      req(db_state$path, global_refresh_trigger())
       get_inventory_summary_stats(db_state$path)
     })
 
@@ -467,7 +466,7 @@ mod_transaction_log_server <- function(id, db_state) {
           remarks = input$reg_remarks
         )
         shinyWidgets::show_alert("Success", "New seed lot registered successfully!", type = "success")
-        refresh_trigger(refresh_trigger() + 1)
+        global_refresh_trigger(global_refresh_trigger() + 1)
       }, error = function(e) {
         shinyWidgets::show_alert("Error", e$message, type = "error")
       })
@@ -584,7 +583,7 @@ mod_transaction_log_server <- function(id, db_state) {
         updateNumericInput(session, "w_amount", value = 10)
         updateSelectizeInput(session, "w_reason", selected = "")
 
-        refresh_trigger(refresh_trigger() + 1)
+        global_refresh_trigger(global_refresh_trigger() + 1)
 
       }, error = function(e) {
         shinyWidgets::show_alert(
@@ -598,7 +597,7 @@ mod_transaction_log_server <- function(id, db_state) {
     # --- INVENTORY HISTORY TAB ---
     output$history_table <- renderDT({
       req(db_state$path)
-      refresh_trigger()
+      global_refresh_trigger() # Depend on the global trigger
       
       history_data <- get_inventory_history(db_state$path)
       DT::datatable(

@@ -83,14 +83,15 @@ mod_inventory_query_ui <- function(id) {
 #' Inventory Query Module Server
 #' @param id Module id
 #' @param db_state A `reactiveValues` object from `app_server` holding the database path.
+#' @param global_refresh_trigger A reactiveVal to signal data changes.
 #' @noRd
-mod_inventory_query_server <- function(id, db_state) {
+mod_inventory_query_server <- function(id, db_state, global_refresh_trigger) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     # Populate filter dropdowns on load
     observeEvent(
-      db_state$path,
+      list(db_state$path, global_refresh_trigger()),
       {
         req(db_state$path)
         tryCatch(

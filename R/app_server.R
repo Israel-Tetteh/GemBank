@@ -9,11 +9,14 @@ app_server <- function(input, output, session) {
   # Initialize a reactive value for the database path.
   db_state <- shiny::reactiveValues(path = load_db_config())
 
+  # Create a global reactive trigger for refreshing data across modules.
+  global_refresh_trigger <- reactiveVal(0)
+
   # Initialize the server logic for the database setup module.
   mod_setup_server("setup_panel", db_state)
 
   # Initialize the server logic for the data entry module.
-  mod_data_entry_server("data_entry_panel", db_state)
+  mod_data_entry_server("data_entry_panel", db_state, global_refresh_trigger)
 
   # Dynamically render the sidebar connection status UI.
   output$sidebar_status_box <- shiny::renderUI({
@@ -78,7 +81,7 @@ app_server <- function(input, output, session) {
   }, label = "Tab Visibility Controller")
 
   # Initialize the server logic for the inventory ledger module.
-  mod_transaction_log_server("inventory_panel", db_state)
+  mod_transaction_log_server("inventory_panel", db_state, global_refresh_trigger)
 
   # --- Cross-Module Communication Setup ---
   # Create a reactive value to allow other modules to trigger a search in the passport explorer.
@@ -89,7 +92,7 @@ app_server <- function(input, output, session) {
 
   # Initialize the server logic for the species explorer module.
   # It returns a reactive that fires when an accession is clicked.
-  clicked_from_species <- mod_species_explorer_server("species_explorer", db_state)
+  clicked_from_species <- mod_species_explorer_server("species_explorer", db_state, global_refresh_trigger)
 
   # When an accession is clicked in the species explorer, update the passport search term
   # and navigate the user to the passport explorer tab.
@@ -102,16 +105,16 @@ app_server <- function(input, output, session) {
   })
   
   # Initialize the server logic for the germplasm query module.
-  mod_germplasm_query_server("germplasm_query_1", db_state)
+  mod_germplasm_query_server("germplasm_query_1", db_state, global_refresh_trigger)
 
   # Initialize the server logic for the inventory query module.
-  mod_inventory_query_server("inventory_query_1", db_state)
+  mod_inventory_query_server("inventory_query_1", db_state, global_refresh_trigger)
 
   # Initialize the server logic for the trial query module.
-  mod_trial_query_server("trial_query_1", db_state)
+  mod_trial_query_server("trial_query_1", db_state, global_refresh_trigger)
 
   # Initialize the server logic for the plot query module.
-  mod_plot_query_server("plot_query_1", db_state)
+  mod_plot_query_server("plot_query_1", db_state, global_refresh_trigger)
 
   # Render the disconnect button conditionally in the sidebar
   output$disconnect_button_ui <- renderUI({

@@ -107,10 +107,10 @@ mod_data_entry_ui <- function(id) {
         ),
 
         # ========================================================
-        # TAB 3: TRAITS
+        # TAB 2: TRAITS
         # ========================================================
         bslib::accordion_panel(
-          title = tagList("3. Traits", bsicons::bs_icon("rulers")),
+          title = tagList("2. Traits", bsicons::bs_icon("rulers")),
           value = "traits",
               h5(
                 class = "fw-bold text-warning mb-3",
@@ -150,10 +150,10 @@ mod_data_entry_ui <- function(id) {
         ),
 
         # ========================================================
-        # TAB 4: TRIALS
+        # TAB 3: TRIALS
         # ========================================================
         bslib::accordion_panel(
-          title = tagList("4. Trials", bsicons::bs_icon("clipboard-check")),
+          title = tagList("3. Trials", bsicons::bs_icon("clipboard-check")),
           value = "trials",
           h5(class = "fw-bold text-primary mb-3", "Create Field Trial"),
           p(class = "text-muted small mb-4", "Initialize an experimental field or greenhouse trial."),
@@ -212,10 +212,10 @@ mod_data_entry_ui <- function(id) {
         ),
 
         # ========================================================
-        # TAB 5: PLOTS
+        # TAB 4: PLOTS
         # ========================================================
         bslib::accordion_panel(
-          title = tagList("5. Plots", bsicons::bs_icon("grid-3x3-gap-fill")),
+          title = tagList("4. Plots", bsicons::bs_icon("grid-3x3-gap-fill")),
           value = "plots",
               h5(class = "fw-bold text-secondary mb-3", "Assign Plot"),
               p(
@@ -257,10 +257,10 @@ mod_data_entry_ui <- function(id) {
         ),
 
         # ========================================================
-        # TAB 6: OBSERVATIONS
+        # TAB 5: OBSERVATIONS
         # ========================================================
         bslib::accordion_panel(
-          title = tagList("6. Data", bsicons::bs_icon("clipboard-data")),
+          title = tagList("5. Data", bsicons::bs_icon("clipboard-data")),
           value = "observations",
               h5(
                 class = "fw-bold text-danger mb-3",
@@ -310,19 +310,17 @@ mod_data_entry_ui <- function(id) {
 #' Data Entry Module Server
 #' @param id Module id
 #' @param db_state Reactive variable holding the current DB path
+#' @param global_refresh_trigger A reactiveVal to signal data changes.
 #' @noRd
-mod_data_entry_server <- function(id, db_state) {
+mod_data_entry_server <- function(id, db_state, global_refresh_trigger) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     # Reactive value to store the full trait table (name + unit)
     all_traits_data <- reactiveVal(data.frame())
     
-    # Reactive trigger to force dropdown updates across all components when DB changes
-    db_update_trigger <- reactiveVal(0)
-    
     # Observe changes in db_state$path or direct triggers to reload dropdowns
-    observeEvent(list(db_state$path, db_update_trigger()), {
+    observeEvent(list(db_state$path, global_refresh_trigger()), {
       path <- db_state$path
       req(path)
       
@@ -384,7 +382,7 @@ mod_data_entry_server <- function(id, db_state) {
           type = "success"
         )
         # Trigger dropdown refresh globally
-        db_update_trigger(db_update_trigger() + 1)
+        global_refresh_trigger(global_refresh_trigger() + 1)
       }, error = function(e) {
         shinyWidgets::show_alert(
           title = "Error",
